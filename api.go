@@ -4,18 +4,17 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/go-ini/ini"
 	"github.com/gorilla/mux"
 	"github.com/inverse-inc/packetfence/go/api-frontend/unifiedapierrors"
-	"github.com/inverse-inc/packetfence/go/pfconfigdriver"
-	"github.com/inverse-inc/packetfence/go/sharedutils"
 	dhcp "github.com/krolaw/dhcp4"
 )
 
@@ -108,13 +107,20 @@ func handleMac2Ip(res http.ResponseWriter, req *http.Request) {
 
 func handleAllStats(res http.ResponseWriter, req *http.Request) {
 	var result Items
-	var interfaces pfconfigdriver.ListenInts
-	pfconfigdriver.FetchDecodeSocket(ctx, &interfaces)
+	cfg, err := ini.Load("config.ini")
+	if err != nil {
+		fmt.Printf("Fail to read file: %v", err)
+		os.Exit(1)
+	}
 
-	if len(interfaces.Element) == 0 {
+	Interfaces := cfg.Section("interfaces").Key("listen").String()
+
+	NetInterfaces := strings.Split(Interfaces, ",")
+
+	if len(Interfaces) == 0 {
 		result.Items = append(result.Items, Stats{})
 	}
-	for _, i := range interfaces.Element {
+	for _, i := range NetInterfaces {
 		if h, ok := intNametoInterface[i]; ok {
 			stat := h.handleApiReq(ApiReq{Req: "stats", NetInterface: i, NetWork: ""})
 			for _, s := range stat.([]Stats) {
@@ -156,26 +162,6 @@ func handleStats(res http.ResponseWriter, req *http.Request) {
 	return
 }
 
-func handleInitiaLease(res http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-
-	if h, ok := intNametoInterface[vars["int"]]; ok {
-		stat := h.handleApiReq(ApiReq{Req: "initialease", NetInterface: vars["int"], NetWork: ""})
-
-		outgoingJSON, err := json.Marshal(stat)
-
-		if err != nil {
-			unifiedapierrors.Error(res, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		fmt.Fprint(res, string(outgoingJSON))
-		return
-	}
-	unifiedapierrors.Error(res, "Interface not found", http.StatusNotFound)
-	return
-}
-
 func handleDebug(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
@@ -209,113 +195,6 @@ func handleReleaseIP(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func handleOverrideOptions(res http.ResponseWriter, req *http.Request) {
-
-	vars := mux.Vars(req)
-
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
-	if err != nil {
-		panic(err)
-	}
-	if err := req.Body.Close(); err != nil {
-		panic(err)
-	}
-
-	// Insert information in MySQL
-	_ = MysqlInsert(vars["mac"], sharedutils.ConvertToString(body))
-
-	var result = &Info{Mac: vars["mac"], Status: "ACK"}
-
-	res.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	res.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(res).Encode(result); err != nil {
-		panic(err)
-	}
-}
-
-func handleOverrideNetworkOptions(res http.ResponseWriter, req *http.Request) {
-
-	vars := mux.Vars(req)
-
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
-	if err != nil {
-		panic(err)
-	}
-	if err := req.Body.Close(); err != nil {
-		panic(err)
-	}
-
-	// Insert information in MySQL
-	_ = MysqlInsert(vars["network"], sharedutils.ConvertToString(body))
-
-	var result = &Info{Network: vars["network"], Status: "ACK"}
-
-	res.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	res.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(res).Encode(result); err != nil {
-		panic(err)
-	}
-}
-
-func handleRemoveOptions(res http.ResponseWriter, req *http.Request) {
-
-	vars := mux.Vars(req)
-
-	var result = &Info{Mac: vars["mac"], Status: "ACK"}
-
-	err := MysqlDel(vars["mac"])
-	if !err {
-		result = &Info{Mac: vars["mac"], Status: "NAK"}
-	}
-	res.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	res.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(res).Encode(result); err != nil {
-		panic(err)
-	}
-}
-
-func handleRemoveNetworkOptions(res http.ResponseWriter, req *http.Request) {
-
-	vars := mux.Vars(req)
-
-	var result = &Info{Network: vars["network"], Status: "ACK"}
-
-	err := MysqlDel(vars["network"])
-	if !err {
-		result = &Info{Network: vars["network"], Status: "NAK"}
-	}
-	res.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	res.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(res).Encode(result); err != nil {
-		panic(err)
-	}
-}
-
-func decodeOptions(b string) (map[dhcp.OptionCode][]byte, bool) {
-	var options []Options
-	_, value := MysqlGet(b)
-	decodedValue := sharedutils.ConvertToByte(value)
-	var dhcpOptions = make(map[dhcp.OptionCode][]byte)
-	if err := json.Unmarshal(decodedValue, &options); err != nil {
-		return dhcpOptions, false
-	}
-	for _, option := range options {
-		var Value interface{}
-		switch option.Type {
-		case "ipaddr":
-			Value = net.ParseIP(option.Value)
-			dhcpOptions[option.Option] = Value.(net.IP).To4()
-		case "string":
-			Value = option.Value
-			dhcpOptions[option.Option] = []byte(Value.(string))
-		case "int":
-			Value = option.Value
-			dhcpOptions[option.Option] = []byte(Value.(string))
-		}
-	}
-	return dhcpOptions, true
-}
-
 func (h *Interface) handleApiReq(Request ApiReq) interface{} {
 	var stats []Stats
 
@@ -335,14 +214,6 @@ func (h *Interface) handleApiReq(Request ApiReq) interface{} {
 				key := []byte(option.String())
 				key[0] = key[0] | ('a' - 'A')
 				Options[string(key)] = Tlv.Tlvlist[int(option)].Decode.String(value)
-			}
-
-			// Add network options on the fly
-			x, err := decodeOptions(v.network.IP.String())
-			if err {
-				for key, value := range x {
-					Options[key.String()] = Tlv.Tlvlist[int(key)].Decode.String(value)
-				}
 			}
 
 			var Members []Node
@@ -378,16 +249,6 @@ func (h *Interface) handleApiReq(Request ApiReq) interface{} {
 		}
 		return stats
 	}
-	// Update the lease
-	if Request.Req == "initialease" {
-
-		for _, v := range h.network {
-			initiaLease(&v.dhcpHandler)
-			stats = append(stats, Stats{EthernetName: Request.NetInterface, Net: v.network.String(), Category: v.dhcpHandler.role, Status: "Init Lease success"})
-		}
-		return stats
-	}
-
 	// Debug
 	if Request.Req == "debug" {
 		for _, v := range h.network {

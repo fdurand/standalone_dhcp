@@ -59,28 +59,19 @@ func newDHCPConfig() *Interfaces {
 
 func (d *Interfaces) readConfig() {
 
-	cfg, err := ini.Load("my.ini")
+	cfg, err := ini.Load("config.ini")
 	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
 		os.Exit(1)
 	}
 
-	Interfaces := cfg.Section("intrfaces").Key("listen").String()
+	Interfaces := cfg.Section("interfaces").Key("listen").String()
 
 	NetInterfaces := strings.Split(Interfaces, ",")
 
 	networks := cfg.SectionStrings()
 
 	networkKey, _ := regexp.Compile("^network *.$")
-
-	// var interfaces pfconfigdriver.ListenInts
-	// pfconfigdriver.FetchDecodeSocket(ctx, &interfaces)
-
-	// var keyConfNet pfconfigdriver.PfconfigKeys
-	// keyConfNet.PfconfigNS = "config::Network"
-	// keyConfNet.PfconfigHostnameOverlay = "yes"
-	//
-	// pfconfigdriver.FetchDecodeSocket(ctx, &keyConfNet)
 
 	for _, v := range NetInterfaces {
 
@@ -123,11 +114,6 @@ func (d *Interfaces) readConfig() {
 				if networkKey.MatchString(key) {
 					sec := cfg.Section(key)
 					spew.Dump(sec)
-					// for _, key := range keyConfNet.Keys {
-					// 	var ConfNet pfconfigdriver.RessourseNetworkConf
-					// 	ConfNet.PfconfigHashNS = key
-					//
-					// 	pfconfigdriver.FetchDecodeSocket(ctx, &ConfNet)
 					if sec.Key("dhcpd").String() == "disabled" {
 						continue
 					}
@@ -174,7 +160,6 @@ func (d *Interfaces) readConfig() {
 
 						DHCPScope.xid = xid
 
-						initiaLease(&DHCPScope)
 						ExcludeIP(&DHCPScope, sec.Key("ip_reserved").String())
 						DHCPScope.ipReserved = sec.Key("ip_reserved").String()
 
@@ -183,11 +168,11 @@ func (d *Interfaces) readConfig() {
 						options[dhcp.OptionSubnetMask] = []byte(net.ParseIP(sec.Key("netmask").String()).To4())
 						// options[dhcp.OptionDomainNameServer] = ShuffleDNS(sec.Key("dns").String())
 						// options[dhcp.OptionRouter] = ShuffleGateway(sec.Key("gateway").String())
-						options[dhcp.OptionDomainNameServer] = ShuffleDNS(sec.Key("dns").String())
-						options[dhcp.OptionRouter] = ShuffleGateway(sec.Key("gateway").String())
+						options[dhcp.OptionDomainNameServer] = ShuffleDNS(sec)
+						options[dhcp.OptionRouter] = ShuffleGateway(sec)
 						options[dhcp.OptionDomainName] = []byte(sec.Key("domaine-name").String())
 						DHCPScope.options = options
-						if len(ConfNet.NextHop) > 0 {
+						if len(sec.Key("next_hop").String()) > 0 {
 							DHCPScope.layer2 = false
 						} else {
 							DHCPScope.layer2 = true
