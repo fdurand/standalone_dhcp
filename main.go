@@ -67,7 +67,7 @@ func main() {
 	// Read pfconfig
 	DHCPConfig = newDHCPConfig()
 	DHCPConfig.readConfig()
-
+	spew.Dump(DHCPConfig)
 	// Queue value
 	var (
 		maxQueueSize = 100
@@ -176,11 +176,13 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	answer.MAC = p.CHAddr()
 	answer.SrcIP = h.Ipv4
 	answer.Iface = h.intNet
+	answer.Local = false
 	ipStr, _, _ := net.SplitHostPort(srcIP.String())
 	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
 	for _, v := range h.network {
 		// Case of a l2 dhcp request
 		if net.ParseIP(ipStr).Equal(net.IPv4zero) && (p.GIAddr().Equal(net.IPv4zero) || v.network.Contains(p.CIAddr())) {
+			answer.Local = true
 			// Case we are in L3
 			if !p.CIAddr().Equal(net.IPv4zero) && !v.network.Contains(p.CIAddr()) {
 				continue
@@ -204,7 +206,6 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 		return answer
 	}
 	defer recoverName(options)
-	answer.Local = handler.layer2
 
 	log.LoggerWContext(ctx).Debug(p.CHAddr().String() + " " + msgType.String() + " xID " + sharedutils.ByteToString(p.XId()))
 
@@ -309,7 +310,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			// Ping the ip address
 			inarp = false
 			// Layer 2 test (arp cache)
-			if handler.layer2 {
+			if answer.Local {
 				mac := arp.Search(dhcp.IPAdd(handler.start, free).String())
 				if mac != "" && mac != FreeMac {
 					if p.CHAddr().String() != mac {

@@ -27,8 +27,10 @@ type DHCPHandler struct {
 	hwcache       *cache.Cache
 	xid           *cache.Cache
 	available     *pool.DHCPPool // DHCPPool keeps track of the available IPs in the pool
-	layer2        bool
 	role          string
+	dhcpType      string
+	srvIP         net.IP
+	srcIP         net.IP
 	ipReserved    string
 }
 
@@ -48,7 +50,6 @@ type Interface struct {
 type Network struct {
 	network     net.IPNet
 	dhcpHandler DHCPHandler
-	splittednet bool
 }
 
 func newDHCPConfig() *Interfaces {
@@ -117,7 +118,7 @@ func (d *Interfaces) readConfig() {
 
 						var DHCPNet Network
 						var DHCPScope DHCPHandler
-						DHCPNet.splittednet = false
+						DHCPScope.dhcpType = "server"
 						DHCPNet.network.IP = net.ParseIP(netWork[1])
 						DHCPNet.network.Mask = net.IPMask(net.ParseIP(sec.Key("netmask").String()))
 						DHCPScope.ip = IP.To4()
@@ -162,11 +163,6 @@ func (d *Interfaces) readConfig() {
 						options[dhcp.OptionRouter] = ShuffleGateway(sec)
 						options[dhcp.OptionDomainName] = []byte(sec.Key("domain-name").String())
 						DHCPScope.options = options
-						if len(sec.Key("next_hop").String()) > 0 {
-							DHCPScope.layer2 = false
-						} else {
-							DHCPScope.layer2 = true
-						}
 						DHCPNet.dhcpHandler = DHCPScope
 
 						ethIf.network = append(ethIf.network, DHCPNet)
@@ -175,5 +171,33 @@ func (d *Interfaces) readConfig() {
 			}
 			d.intsNet = append(d.intsNet, ethIf)
 		}
+	}
+	Interfaces = cfg.Section("interfaces").Key("relay").String()
+	result := strings.Split(Interfaces, ",")
+	for i := range result {
+		var ethIf Interface
+
+		interfaceConfig := strings.Split(result[i], ":")
+		iface, _ := net.InterfaceByName(interfaceConfig[0])
+		ethIf.intNet = iface
+		ethIf.Name = iface.Name
+
+		interfaceIP, _ := iface.Addrs()
+		for _, ip := range interfaceIP {
+			ip := ip
+			listenIP, NetIP, _ := net.ParseCIDR(ip.String())
+			if listenIP.To4() == nil {
+				continue
+			}
+			ethIf.layer2 = append(ethIf.layer2, NetIP)
+			var DHCPNet Network
+			var DHCPScope DHCPHandler
+			DHCPScope.srcIP = listenIP
+			DHCPScope.dhcpType = "relay"
+			DHCPScope.srvIP = net.ParseIP(interfaceConfig[1])
+			DHCPNet.dhcpHandler = DHCPScope
+			ethIf.network = append(ethIf.network, DHCPNet)
+		}
+		d.intsNet = append(d.intsNet, ethIf)
 	}
 }
