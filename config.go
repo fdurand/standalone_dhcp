@@ -30,7 +30,6 @@ type DHCPHandler struct {
 	role          string
 	dhcpType      string
 	srvIP         net.IP
-	srcIP         net.IP
 	ipReserved    string
 }
 
@@ -174,7 +173,11 @@ func (d *Interfaces) readConfig() {
 	}
 	Interfaces = cfg.Section("interfaces").Key("relay").String()
 	result := strings.Split(Interfaces, ",")
+
 	for i := range result {
+		if result[i] == "" {
+			continue
+		}
 		var ethIf Interface
 
 		interfaceConfig := strings.Split(result[i], ":")
@@ -192,7 +195,7 @@ func (d *Interfaces) readConfig() {
 			ethIf.layer2 = append(ethIf.layer2, NetIP)
 			var DHCPNet Network
 			var DHCPScope DHCPHandler
-			DHCPScope.srcIP = listenIP
+			DHCPScope.ip = listenIP
 			DHCPScope.dhcpType = "relay"
 			DHCPScope.srvIP = net.ParseIP(interfaceConfig[1])
 			DHCPNet.dhcpHandler = DHCPScope

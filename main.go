@@ -96,7 +96,7 @@ func main() {
 		for net := range v.network {
 			net := net
 			go func() {
-				v.runUnicast(jobs, v.network[net].dhcpHandler.ip, ctx)
+				v.runUnicast(jobs, v.network[net].dhcpHandler.ip, v.network[net].dhcpHandler.dhcpType, ctx)
 			}()
 
 			// We only need one listener per ip
@@ -164,9 +164,9 @@ func (h *Interface) run(jobs chan job, ctx context.Context) {
 }
 
 // Unicast listener
-func (h *Interface) runUnicast(jobs chan job, ip net.IP, ctx context.Context) {
+func (h *Interface) runUnicast(jobs chan job, ip net.IP, dhcpType string, ctx context.Context) {
 
-	ListenAndServeIfUnicast(h.Name, h, jobs, ip, ctx)
+	ListenAndServeIfUnicast(h.Name, h, jobs, ip, dhcpType, ctx)
 }
 
 func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.MessageType, srcIP net.Addr) (answer Answer) {
