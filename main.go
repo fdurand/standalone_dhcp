@@ -177,6 +177,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	answer.SrcIP = h.Ipv4
 	answer.Iface = h.intNet
 	answer.Local = false
+
 	ipStr, _, _ := net.SplitHostPort(srcIP.String())
 	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
 	for _, v := range h.network {
@@ -210,6 +211,138 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	log.LoggerWContext(ctx).Debug(p.CHAddr().String() + " " + msgType.String() + " xID " + sharedutils.ByteToString(p.XId()))
 
 	id, _ := GlobalTransactionLock.Lock()
+
+	// DHCP Relay
+
+	if handler.dhcpType == "relay" {
+
+		answer.srvIP = net.Addr{handler.srvIP.To4(), 68}
+		answer.SrcIP = handler.ip
+		answer.dhcpType = handler.dhcpType
+
+		switch msgType {
+
+		case dhcp.Discover:
+			fmt.Println("discover ", p.YIAddr(), "from", p.CHAddr())
+			// h.m[string(p.XId())] = true
+			p2 := dhcp.NewPacket(dhcp.BootRequest)
+			p2.SetCHAddr(p.CHAddr())
+			p2.SetGIAddr(handler.ip)
+			p2.SetXId(p.XId())
+			p2.SetBroadcast(false)
+			for k, v := range p.ParseOptions() {
+				p2.AddOption(k, v)
+			}
+			answer.D = p2
+			return answer
+
+		case dhcp.Offer:
+			// if !h.m[string(p.XId())] {
+			// 	return nil
+			// }
+			var sip net.IP
+			for k, v := range p.ParseOptions() {
+				if k == dhcp.OptionServerIdentifier {
+					sip = v
+				}
+			}
+			fmt.Println("offering from", sip.String(), p.YIAddr(), "to", p.CHAddr())
+			p2 := dhcp.NewPacket(dhcp.BootReply)
+			p2.SetXId(p.XId())
+			p2.SetFile(p.File())
+			p2.SetFlags(p.Flags())
+			p2.SetYIAddr(p.YIAddr())
+			p2.SetGIAddr(p.GIAddr())
+			p2.SetSIAddr(p.SIAddr())
+			p2.SetCHAddr(p.CHAddr())
+			p2.SetSecs(p.Secs())
+			for k, v := range p.ParseOptions() {
+				p2.AddOption(k, v)
+			}
+			answer.IP = p.SIAddr()
+			answer.D = p2
+			return answer
+
+		case dhcp.Request:
+			// h.m[string(p.XId())] = true
+			fmt.Println("request ", p.YIAddr(), "from", p.CHAddr())
+			p2 := dhcp.NewPacket(dhcp.BootRequest)
+			p2.SetCHAddr(p.CHAddr())
+			p2.SetFile(p.File())
+			p2.SetCIAddr(p.CIAddr())
+			p2.SetSIAddr(p.SIAddr())
+			p2.SetGIAddr(handler.ip)
+			p2.SetXId(p.XId())
+			p2.SetBroadcast(false)
+			for k, v := range p.ParseOptions() {
+				p2.AddOption(k, v)
+			}
+			answer.D = p2
+			return answer
+
+		case dhcp.ACK:
+			// if !h.m[string(p.XId())] {
+			// 	return nil
+			// }
+			var sip net.IP
+			for k, v := range p.ParseOptions() {
+				if k == dhcp.OptionServerIdentifier {
+					sip = v
+				}
+			}
+			fmt.Println("ACK from", sip.String(), p.YIAddr(), "to", p.CHAddr())
+			p2 := dhcp.NewPacket(dhcp.BootReply)
+			p2.SetXId(p.XId())
+			p2.SetFile(p.File())
+			p2.SetFlags(p.Flags())
+			p2.SetSIAddr(p.SIAddr())
+			p2.SetYIAddr(p.YIAddr())
+			p2.SetGIAddr(p.GIAddr())
+			p2.SetCHAddr(p.CHAddr())
+			p2.SetSecs(p.Secs())
+			for k, v := range p.ParseOptions() {
+				p2.AddOption(k, v)
+			}
+			answer.D = p2
+			return answer
+
+		case dhcp.NAK:
+			// if !h.m[string(p.XId())] {
+			// 	return nil
+			// }
+			fmt.Println("NAK from", p.SIAddr(), p.YIAddr(), "to", p.CHAddr())
+			p2 := dhcp.NewPacket(dhcp.BootReply)
+			p2.SetXId(p.XId())
+			p2.SetFile(p.File())
+			p2.SetFlags(p.Flags())
+			p2.SetSIAddr(p.SIAddr())
+			p2.SetYIAddr(p.YIAddr())
+			p2.SetGIAddr(p.GIAddr())
+			p2.SetCHAddr(p.CHAddr())
+			p2.SetSecs(p.Secs())
+			for k, v := range p.ParseOptions() {
+				p2.AddOption(k, v)
+			}
+			answer.D = p2
+			return answer
+
+		case dhcp.Release, dhcp.Decline:
+			p2 := dhcp.NewPacket(dhcp.BootRequest)
+			p2.SetCHAddr(p.CHAddr())
+			p2.SetFile(p.File())
+			p2.SetCIAddr(p.CIAddr())
+			p2.SetSIAddr(p.SIAddr())
+			p2.SetGIAddr(handler.ip)
+			p2.SetXId(p.XId())
+			p2.SetBroadcast(false)
+			for k, v := range p.ParseOptions() {
+				p2.AddOption(k, v)
+			}
+			answer.D = p2
+			return answer
+		}
+		return answer
+	}
 
 	cacheKey := p.CHAddr().String() + " " + msgType.String() + " xID " + sharedutils.ByteToString(p.XId())
 	if _, found := GlobalTransactionCache.Get(cacheKey); found {

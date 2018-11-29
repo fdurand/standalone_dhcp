@@ -9,12 +9,14 @@ import (
 )
 
 type Answer struct {
-	D     dhcp.Packet
-	IP    net.IP
-	MAC   net.HardwareAddr
-	Iface *net.Interface
-	SrcIP net.IP
-	Local bool
+	D        dhcp.Packet
+	IP       net.IP
+	MAC      net.HardwareAddr
+	Iface    *net.Interface
+	SrcIP    net.IP
+	srvIP    net.Addr
+	Local    bool
+	dhcpType string
 }
 
 type Handler interface {
