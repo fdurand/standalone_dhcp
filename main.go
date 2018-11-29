@@ -178,12 +178,9 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	answer.Iface = h.intNet
 
 	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
-
 	for _, v := range h.network {
-
 		// Case of a l2 dhcp request
 		if v.dhcpHandler.layer2 && (p.GIAddr().Equal(net.IPv4zero) || v.network.Contains(p.CIAddr())) {
-
 			// Case we are in L3
 			if !p.CIAddr().Equal(net.IPv4zero) && !v.network.Contains(p.CIAddr()) {
 				continue
@@ -206,7 +203,6 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	if len(handler.ip) == 0 {
 		return answer
 	}
-
 	defer recoverName(options)
 	answer.Local = handler.layer2
 

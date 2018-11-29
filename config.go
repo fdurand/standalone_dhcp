@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	cache "github.com/fdurand/go-cache"
 	"github.com/go-ini/ini"
 	"github.com/inverse-inc/packetfence/go/dhcp/pool"
@@ -66,15 +65,12 @@ func (d *Interfaces) readConfig() {
 	}
 
 	Interfaces := cfg.Section("interfaces").Key("listen").String()
-
 	NetInterfaces := strings.Split(Interfaces, ",")
 
 	networks := cfg.SectionStrings()
-
-	networkKey, _ := regexp.Compile("^network *.$")
+	networkKey, _ := regexp.Compile("^network (?P<Net>.*)$")
 
 	for _, v := range NetInterfaces {
-
 		eth, err := net.InterfaceByName(v)
 
 		if err != nil {
@@ -92,7 +88,6 @@ func (d *Interfaces) readConfig() {
 
 		adresses, _ := eth.Addrs()
 		for _, adresse := range adresses {
-
 			var NetIP *net.IPNet
 			var IP net.IP
 			IP, NetIP, _ = net.ParseCIDR(adresse.String())
@@ -101,19 +96,16 @@ func (d *Interfaces) readConfig() {
 			if a == b {
 				continue
 			}
+			if IP.To4() == nil {
+				continue
+			}
 
-			if IP.To16() != nil {
-				ethIf.Ipv6 = IP
-			}
-			if IP.To4() != nil {
-				ethIf.Ipv4 = IP
-			}
 			ethIf.layer2 = append(ethIf.layer2, NetIP)
 
 			for _, key := range networks {
 				if networkKey.MatchString(key) {
 					sec := cfg.Section(key)
-					spew.Dump(sec)
+					netWork := networkKey.FindStringSubmatch(key)
 					if sec.Key("dhcpd").String() == "disabled" {
 						continue
 					}
@@ -126,7 +118,7 @@ func (d *Interfaces) readConfig() {
 						var DHCPNet Network
 						var DHCPScope DHCPHandler
 						DHCPNet.splittednet = false
-						DHCPNet.network.IP = net.ParseIP(key)
+						DHCPNet.network.IP = net.ParseIP(netWork[1])
 						DHCPNet.network.Mask = net.IPMask(net.ParseIP(sec.Key("netmask").String()))
 						DHCPScope.ip = IP.To4()
 						if _, found := VIPIp[eth.Name]; found {
@@ -166,11 +158,9 @@ func (d *Interfaces) readConfig() {
 						var options = make(map[dhcp.OptionCode][]byte)
 
 						options[dhcp.OptionSubnetMask] = []byte(net.ParseIP(sec.Key("netmask").String()).To4())
-						// options[dhcp.OptionDomainNameServer] = ShuffleDNS(sec.Key("dns").String())
-						// options[dhcp.OptionRouter] = ShuffleGateway(sec.Key("gateway").String())
 						options[dhcp.OptionDomainNameServer] = ShuffleDNS(sec)
 						options[dhcp.OptionRouter] = ShuffleGateway(sec)
-						options[dhcp.OptionDomainName] = []byte(sec.Key("domaine-name").String())
+						options[dhcp.OptionDomainName] = []byte(sec.Key("domain-name").String())
 						DHCPScope.options = options
 						if len(sec.Key("next_hop").String()) > 0 {
 							DHCPScope.layer2 = false
