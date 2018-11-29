@@ -43,7 +43,7 @@ type ServeConn interface {
 // Additionally, response packets may not return to the same
 // interface that the request was received from.  Writing a custom ServeConn,
 // or using ServeIf() can provide a workaround to this problem.
-func Serve(conn ServeConn, handler Handler, jobs chan job, ctx context.Context) error {
+func Serve(conn *serveIfConn, handler Handler, jobs chan job, ctx context.Context) error {
 
 	buffer := make([]byte, 1500)
 
