@@ -75,7 +75,7 @@ func Serve(conn ServeConn, handler Handler, jobs chan job, ctx context.Context) 
 		}
 		var dhcprequest dhcp.Packet
 		dhcprequest = append([]byte(nil), req...)
-		jobe := job{dhcprequest, reqType, handler, addr, cm.Dst, ctx}
+		jobe := job{dhcprequest, reqType, handler, addr, cm.Dst, conn, ctx}
 		go func() {
 			jobs <- jobe
 		}()

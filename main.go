@@ -176,8 +176,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	answer.MAC = p.CHAddr()
 	answer.SrcIP = h.Ipv4
 	answer.Iface = h.intNet
-	ipStr, portStr, _ := net.SplitHostPort(srcIP.String())
-	spew.Dump(portStr)
+	ipStr, _, _ := net.SplitHostPort(srcIP.String())
 	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
 	for _, v := range h.network {
 		// Case of a l2 dhcp request
