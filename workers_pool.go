@@ -19,7 +19,7 @@ type job struct {
 
 func doWork(id int, jobe job) {
 	var ans Answer
-	if ans = jobe.handler.ServeDHCP(jobe.localCtx, jobe.p, jobe.msgType); ans.D != nil {
+	if ans = jobe.handler.ServeDHCP(jobe.localCtx, jobe.p, jobe.msgType, jobe.addr); ans.D != nil {
 		ipStr, _, _ := net.SplitHostPort(jobe.addr.String())
 		if !(jobe.p.GIAddr().Equal(net.IPv4zero) && net.ParseIP(ipStr).Equal(net.IPv4zero)) {
 			sendUnicastDHCP(ans.D, jobe.addr, jobe.dst, jobe.p.GIAddr(), true)

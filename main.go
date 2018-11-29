@@ -169,14 +169,14 @@ func (h *Interface) runUnicast(jobs chan job, ip net.IP, ctx context.Context) {
 	ListenAndServeIfUnicast(h.Name, h, jobs, ip, ctx)
 }
 
-func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.MessageType) (answer Answer) {
+func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.MessageType, srcIP net.Addr) (answer Answer) {
 
 	var handler DHCPHandler
 	options := p.ParseOptions()
 	answer.MAC = p.CHAddr()
 	answer.SrcIP = h.Ipv4
 	answer.Iface = h.intNet
-
+	spew.Dump(srcIP)
 	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
 	for _, v := range h.network {
 		// Case of a l2 dhcp request
