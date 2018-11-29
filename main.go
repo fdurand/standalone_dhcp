@@ -176,11 +176,12 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	answer.MAC = p.CHAddr()
 	answer.SrcIP = h.Ipv4
 	answer.Iface = h.intNet
-	spew.Dump(srcIP)
+	ipStr, portStr, _ := net.SplitHostPort(srcIP.String())
+	spew.Dump(portStr)
 	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
 	for _, v := range h.network {
 		// Case of a l2 dhcp request
-		if net.ParseIP(srcIP.String()).Equal(net.IPv4zero) && (p.GIAddr().Equal(net.IPv4zero) || v.network.Contains(p.CIAddr())) {
+		if net.ParseIP(ipStr).Equal(net.IPv4zero) && (p.GIAddr().Equal(net.IPv4zero) || v.network.Contains(p.CIAddr())) {
 			// Case we are in L3
 			if !p.CIAddr().Equal(net.IPv4zero) && !v.network.Contains(p.CIAddr()) {
 				continue
