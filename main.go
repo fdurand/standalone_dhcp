@@ -67,7 +67,7 @@ func main() {
 	// Read pfconfig
 	DHCPConfig = newDHCPConfig()
 	DHCPConfig.readConfig()
-	spew.Dump(DHCPConfig)
+
 	// Queue value
 	var (
 		maxQueueSize = 100

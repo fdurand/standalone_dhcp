@@ -6,7 +6,6 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
 	dhcp "github.com/krolaw/dhcp4"
 )
 
@@ -22,7 +21,6 @@ type job struct {
 
 func doWork(id int, jobe job) {
 	var ans Answer
-	spew.Dump(jobe.addr)
 	if ans = jobe.handler.ServeDHCP(jobe.localCtx, jobe.p, jobe.msgType, jobe.addr); ans.D != nil {
 		if ans.dhcpType == "relay" {
 			switch jobe.msgType {
