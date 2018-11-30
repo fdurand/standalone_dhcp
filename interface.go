@@ -15,41 +15,36 @@ import (
 )
 
 // Broadcast Listener
-func (h *Interface) run(jobs chan job, ctx context.Context) {
+func (I *Interface) run(jobs chan job, ctx context.Context) {
 
-	ListenAndServeIf(h, h, jobs, ctx)
+	ListenAndServeIf(I, I, jobs, ctx)
 }
 
 // Unicast listener
-func (h *Interface) runUnicast(jobs chan job, ctx context.Context) {
+func (I *Interface) runUnicast(jobs chan job, ctx context.Context) {
 
-	ListenAndServeIfUnicast(h, h, jobs, ctx)
+	ListenAndServeIfUnicast(I, I, jobs, ctx)
 }
 
 //  Return true is it's a relay interface
-func (h *Interface) isRelay() bool {
-	if h.InterfaceType == "relay" {
+func (I *Interface) isRelay() bool {
+	if I.InterfaceType == "relay" {
 		return true
 	}
 	return false
 }
 
-func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.MessageType, srcIP net.Addr) (answer Answer) {
+func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.MessageType, srcIP net.Addr) (answer Answer) {
 
 	var handler DHCPHandler
 	options := p.ParseOptions()
 	answer.MAC = p.CHAddr()
-	answer.SrcIP = h.Ipv4
-	answer.Iface = h.intNet
-	answer.Local = false
+	Local := false
 	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
 
 	// DHCP Relay
 
-	if h.isRelay() {
-
-		answer.relayIP = h.relayIP
-		answer.dhcpType = h.InterfaceType
+	if I.isRelay() {
 
 		switch msgType {
 
@@ -57,7 +52,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			log.LoggerWContext(ctx).Info("DISCOVER ", p.YIAddr(), "from", p.CHAddr())
 			p2 := dhcp.NewPacket(dhcp.BootRequest)
 			p2.SetCHAddr(p.CHAddr())
-			p2.SetGIAddr(h.Ipv4)
+			p2.SetGIAddr(I.Ipv4)
 			p2.SetXId(p.XId())
 			p2.SetBroadcast(false)
 			for k, v := range p.ParseOptions() {
@@ -97,7 +92,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			p2.SetFile(p.File())
 			p2.SetCIAddr(p.CIAddr())
 			p2.SetSIAddr(p.SIAddr())
-			p2.SetGIAddr(h.Ipv4)
+			p2.SetGIAddr(I.Ipv4)
 			p2.SetXId(p.XId())
 			p2.SetBroadcast(false)
 			for k, v := range p.ParseOptions() {
@@ -152,7 +147,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			p2.SetFile(p.File())
 			p2.SetCIAddr(p.CIAddr())
 			p2.SetSIAddr(p.SIAddr())
-			p2.SetGIAddr(h.Ipv4)
+			p2.SetGIAddr(I.Ipv4)
 			p2.SetXId(p.XId())
 			p2.SetBroadcast(false)
 			for k, v := range p.ParseOptions() {
@@ -166,10 +161,10 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 
 		ipStr, _, _ := net.SplitHostPort(srcIP.String())
 
-		for _, v := range h.network {
+		for _, v := range I.network {
 			// Case of a l2 dhcp request
 			if net.ParseIP(ipStr).Equal(net.IPv4zero) && (p.GIAddr().Equal(net.IPv4zero) || v.network.Contains(p.CIAddr())) {
-				answer.Local = true
+				Local = true
 				// Case we are in L3
 				if !p.CIAddr().Equal(net.IPv4zero) && !v.network.Contains(p.CIAddr()) {
 					continue
@@ -297,7 +292,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 				// Ping the ip address
 				inarp = false
 				// Layer 2 test (arp cache)
-				if answer.Local {
+				if Local {
 					mac := arp.Search(dhcp.IPAdd(handler.start, free).String())
 					if mac != "" && mac != FreeMac {
 						if p.CHAddr().String() != mac {
@@ -340,7 +335,6 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 		reply:
 
 			answer.IP = dhcp.IPAdd(handler.start, free)
-			answer.Iface = h.intNet
 			// Add options on the fly
 			var GlobalOptions dhcp.Options
 			var options = make(map[dhcp.OptionCode][]byte)
@@ -379,7 +373,6 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			}
 
 			answer.IP = reqIP
-			answer.Iface = h.intNet
 
 			var Reply bool
 			var Index int
@@ -517,7 +510,6 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			log.LoggerWContext(ctx).Info(prettyType + " of " + reqIP.String() + " from " + clientMac)
 			return answer
 		}
-		answer.Iface = h.intNet
 		log.LoggerWContext(ctx).Info(p.CHAddr().String() + " Nak " + sharedutils.ByteToString(p.XId()))
 		answer.D = dhcp.ReplyPacket(p, dhcp.NAK, handler.ip.To4(), nil, 0, nil)
 		return answer

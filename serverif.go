@@ -43,11 +43,11 @@ func (s *serveIfConn) WriteTo(b []byte, addr net.Addr) (n int, err error) {
 // import outside the std library.  Serving DHCP over multiple interfaces will
 // require your own dhcp4.ServeConn, as listening to broadcasts utilises all
 // interfaces (so you cannot have more than on listener).
-func ServeIf(ifIndex int, p *ipv4.PacketConn, handler Handler, jobs chan job, ctx context.Context) error {
+func ServeIf(ifIndex int, p *ipv4.PacketConn, handler Handler, jobs chan job, interfaceNet *Interface, ctx context.Context) error {
 	if err := p.SetControlMessage(ipv4.FlagInterface, true); err != nil {
 		return err
 	}
-	return Serve(&serveIfConn{ifIndex: ifIndex, conn: p}, handler, jobs, ctx)
+	return Serve(&serveIfConn{ifIndex: ifIndex, conn: p}, handler, jobs, interfaceNet, ctx)
 }
 
 // ListenAndServeIf listens on the UDP network address addr and then calls
@@ -65,7 +65,7 @@ func ListenAndServeIf(interfaceNet *Interface, handler Handler, jobs chan job, c
 	}
 	defer p.Close()
 
-	return ServeIf(iface.Index, p, handler, jobs, ctx)
+	return ServeIf(iface.Index, p, handler, jobs, interfaceNet, ctx)
 }
 
 func broadcastOpen(bindAddr net.IP, port int, ifname string) (*ipv4.PacketConn, error) {
@@ -119,7 +119,7 @@ func ListenAndServeIfUnicast(interfaceNet *Interface, handler Handler, jobs chan
 	}
 	defer p.Close()
 
-	return ServeIf(iface.Index, p, handler, jobs, ctx)
+	return ServeIf(iface.Index, p, handler, jobs, interfaceNet, ctx)
 }
 
 func UnicastOpen(interfaceNet *Interface) (*ipv4.PacketConn, error) {

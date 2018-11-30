@@ -6,47 +6,46 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
 	dhcp "github.com/krolaw/dhcp4"
 )
 
 type job struct {
-	p        dhcp.Packet
-	msgType  dhcp.MessageType
-	handler  Handler
-	addr     net.Addr //remote client ip
-	dst      net.IP   //local server ip
-	conn     *serveIfConn
-	localCtx context.Context
+	DHCPpacket dhcp.Packet
+	msgType    dhcp.MessageType
+	Int        *Interface
+	handler    Handler
+	clientAddr net.Addr //remote client ip
+	localCtx   context.Context
 }
 
-func doWork(id int, jobe job) {
+func doWork(id int, element job) {
 	var ans Answer
-	spew.Dump(jobe)
-	if ans = jobe.handler.ServeDHCP(jobe.localCtx, jobe.p, jobe.msgType, jobe.addr); ans.D != nil {
-		if ans.dhcpType == "relay" {
-			switch jobe.msgType {
+	if ans = element.handler.ServeDHCP(element.localCtx, element.DHCPpacket, element.msgType, element.clientAddr); ans.D != nil {
+		// DHCP Relay
+		if element.Int.isRelay() {
+			switch element.msgType {
 			case dhcp.Discover:
-				sendUnicastDHCP(ans.D, ans.relayIP, ans.SrcIP, jobe.p.GIAddr(), 68, 67)
+				sendUnicastDHCP(ans.D, element.Int.relayIP, element.Int.Ipv4, element.DHCPpacket.GIAddr(), bootp_client, bootp_server)
 			case dhcp.Offer:
-				client, _ := NewRawClient(ans.Iface)
-				client.sendDHCP(ans.MAC, ans.D, ans.IP, ans.SrcIP)
+				client, _ := NewRawClient(element.Int.intNet)
+				client.sendDHCP(ans.MAC, ans.D, ans.IP, element.Int.Ipv4)
 				client.Close()
 			case dhcp.Request:
-				sendUnicastDHCP(ans.D, ans.relayIP, ans.SrcIP, jobe.p.GIAddr(), 68, 67)
+				sendUnicastDHCP(ans.D, element.Int.relayIP, element.Int.Ipv4, element.DHCPpacket.GIAddr(), bootp_client, bootp_server)
 			case dhcp.ACK:
-				client, _ := NewRawClient(ans.Iface)
-				client.sendDHCP(ans.MAC, ans.D, ans.IP, ans.SrcIP)
+				client, _ := NewRawClient(element.Int.intNet)
+				client.sendDHCP(ans.MAC, ans.D, ans.IP, element.Int.Ipv4)
 				client.Close()
 			}
 		} else {
-			ipStr, portStr, _ := net.SplitHostPort(jobe.addr.String())
-			if !(jobe.p.GIAddr().Equal(net.IPv4zero) && net.ParseIP(ipStr).Equal(net.IPv4zero)) {
+			// DHCP Server
+			ipStr, portStr, _ := net.SplitHostPort(element.clientAddr.String())
+			if !(element.DHCPpacket.GIAddr().Equal(net.IPv4zero) && net.ParseIP(ipStr).Equal(net.IPv4zero)) {
 				dstPort, _ := strconv.Atoi(portStr)
-				sendUnicastDHCP(ans.D, net.ParseIP(ipStr), jobe.dst, jobe.p.GIAddr(), 67, dstPort)
+				sendUnicastDHCP(ans.D, net.ParseIP(ipStr), element.Int.Ipv4, element.DHCPpacket.GIAddr(), bootp_server, dstPort)
 			} else {
-				client, _ := NewRawClient(ans.Iface)
-				client.sendDHCP(ans.MAC, ans.D, ans.IP, ans.SrcIP)
+				client, _ := NewRawClient(element.Int.intNet)
+				client.sendDHCP(ans.MAC, ans.D, ans.IP, element.Int.Ipv4)
 				client.Close()
 			}
 		}

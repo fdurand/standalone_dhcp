@@ -51,6 +51,9 @@ type Network struct {
 	dhcpHandler DHCPHandler
 }
 
+const bootp_client = 68
+const bootp_server = 67
+
 func newDHCPConfig() *Interfaces {
 	var p Interfaces
 	return &p
@@ -86,7 +89,7 @@ func (d *Interfaces) readConfig() {
 		ethIf.intNet = eth
 		ethIf.Name = eth.Name
 		ethIf.InterfaceType = "server"
-		ethIf.listenPort = 67
+		ethIf.listenPort = bootp_server
 
 		adresses, _ := eth.Addrs()
 		for _, adresse := range adresses {
@@ -188,7 +191,7 @@ func (d *Interfaces) readConfig() {
 		iface, _ := net.InterfaceByName(interfaceConfig[0])
 		ethIf.intNet = iface
 		ethIf.Name = iface.Name
-		ethIf.listenPort = 68
+		ethIf.listenPort = bootp_client
 		interfaceIP, _ := iface.Addrs()
 		for _, ip := range interfaceIP {
 			ip := ip
