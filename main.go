@@ -93,7 +93,6 @@ func main() {
 		v := v
 		// Create a channel for each interfaces
 		intNametoInterface[v.Name] = &v
-		spew.Dump(v)
 		go func() {
 			v.runUnicast(jobs, ctx)
 		}()

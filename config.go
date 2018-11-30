@@ -18,8 +18,7 @@ import (
 )
 
 type DHCPHandler struct {
-	ip            net.IP // Server IP to use
-	vip           net.IP
+	ip            net.IP        // Server IP to use
 	options       dhcp.Options  // Options to send to DHCP Clients
 	start         net.IP        // Start of IP range to distribute
 	leaseRange    int           // Number of IPs to distribute (starting from start)
@@ -125,9 +124,7 @@ func (d *Interfaces) readConfig() {
 						DHCPNet.network.IP = net.ParseIP(netWork[1])
 						DHCPNet.network.Mask = net.IPMask(net.ParseIP(sec.Key("netmask").String()))
 						DHCPScope.ip = IP.To4()
-						if _, found := VIPIp[eth.Name]; found {
-							DHCPScope.vip = VIPIp[eth.Name]
-						}
+
 						DHCPScope.role = "none"
 						DHCPScope.start = net.ParseIP(sec.Key("dhcp_start").String())
 						seconds, _ := strconv.Atoi(sec.Key("dhcp_default_lease_time").String())

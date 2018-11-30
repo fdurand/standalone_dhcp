@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	_ "expvar"
-	"fmt"
 	"net"
 	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
 	dhcp "github.com/krolaw/dhcp4"
 )
 
@@ -23,13 +21,10 @@ type job struct {
 
 func doWork(id int, jobe job) {
 	var ans Answer
-	spew.Dump(jobe)
 	if ans = jobe.handler.ServeDHCP(jobe.localCtx, jobe.p, jobe.msgType, jobe.addr); ans.D != nil {
-		spew.Dump(ans)
 		if ans.dhcpType == "relay" {
 			switch jobe.msgType {
 			case dhcp.Discover:
-				fmt.Println("i am here")
 				sendUnicastDHCP(ans.D, ans.relayIP, ans.SrcIP, jobe.p.GIAddr(), 68, 67)
 			case dhcp.Offer:
 				client, _ := NewRawClient(ans.Iface)
@@ -46,7 +41,7 @@ func doWork(id int, jobe job) {
 			ipStr, portStr, _ := net.SplitHostPort(jobe.addr.String())
 			if !(jobe.p.GIAddr().Equal(net.IPv4zero) && net.ParseIP(ipStr).Equal(net.IPv4zero)) {
 				dstPort, _ := strconv.Atoi(portStr)
-				sendUnicastDHCP(ans.D, net.ParseIP(ipStr), jobe.dst, jobe.p.GIAddr(), 0, dstPort)
+				sendUnicastDHCP(ans.D, net.ParseIP(ipStr), jobe.dst, jobe.p.GIAddr(), 67, dstPort)
 			} else {
 				client, _ := NewRawClient(ans.Iface)
 				client.sendDHCP(ans.MAC, ans.D, ans.IP, ans.SrcIP)

@@ -6,11 +6,9 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 
 	"syscall"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/mdlayher/ethernet"
 	"github.com/mdlayher/raw"
 )
@@ -206,7 +204,7 @@ func (h *iphdr) checksum() {
 // sendUnicastDHCP create a udp packet and stores it in an
 // Ethernet frame, and sends the frame over a raw socket to attempt to wake
 // a machine.
-func sendUnicastDHCP(dhcp []byte, dstIP net.IP, srcIP net.IP, giAddr net.IP, srcPort int, dstPort int) error {
+func sendUnicastDHCP(dhcp []byte, dstIP net.IP, srcIP net.IP, giAddr net.IP, udpsrc int, udpdst int) error {
 
 	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
 	if err != nil {
@@ -215,48 +213,19 @@ func sendUnicastDHCP(dhcp []byte, dstIP net.IP, srcIP net.IP, giAddr net.IP, src
 
 	proto := 17
 
-	var port int
 	var udp udphdr
-	var udpsrc int
-	var udpdst int
 
-	ipStr, portStr, err := net.SplitHostPort(dstIP.String())
-
-	if err != nil {
-		ipStr = dstIP.String()
-	}
 	// Keep as is for futur test
-	if !(net.ParseIP(ipStr).Equal(giAddr)) {
+	if !(dstIP.Equal(giAddr)) {
 		if !(giAddr.Equal(net.IPv4zero)) {
-			ipStr = giAddr.String()
+			dstIP = giAddr
 		}
 	}
 
-	if srcPort != 0 && dstPort != 0 {
-		udpsrc = srcPort
-
-		udpdst = dstPort
-
-		udp = udphdr{
-			src: uint16(udpsrc),
-			dst: uint16(udpdst),
-		}
-	} else {
-		port, _ = strconv.Atoi(portStr)
-		udpsrc := uint(67)
-
-		udpdst = port
-
-		udp = udphdr{
-			src: uint16(udpsrc),
-			dst: uint16(udpdst),
-		}
+	udp = udphdr{
+		src: uint16(udpsrc),
+		dst: uint16(udpdst),
 	}
-	spew.Dump(dstIP)
-	spew.Dump(ipStr)
-	spew.Dump(udpdst)
-	spew.Dump(srcIP)
-	spew.Dump(udpsrc)
 
 	udplen := 8 + len(dhcp)
 
@@ -269,7 +238,7 @@ func sendUnicastDHCP(dhcp []byte, dstIP net.IP, srcIP net.IP, giAddr net.IP, src
 		proto: uint8(proto),
 	}
 	copy(ip.src[:], srcIP.To4())
-	copy(ip.dst[:], net.ParseIP(ipStr).To4())
+	copy(ip.dst[:], dstIP.To4())
 
 	udp.ulen = uint16(udplen)
 	udp.checksum(&ip, dhcp)
@@ -298,7 +267,7 @@ func sendUnicastDHCP(dhcp []byte, dstIP net.IP, srcIP net.IP, giAddr net.IP, src
 	packet := append(ipHeader, dataWithHeader...)
 
 	addr := syscall.SockaddrInet4{}
-	copy(addr.Addr[:], net.ParseIP(ipStr).To4())
+	copy(addr.Addr[:], dstIP.To4())
 	addr.Port = int(udpdst)
 
 	err = syscall.Sendto(s, packet, 0, &addr)

@@ -7,7 +7,6 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/net/ipv4"
 )
 
@@ -108,7 +107,7 @@ func broadcastOpen(bindAddr net.IP, port int, ifname string) (*ipv4.PacketConn, 
 // Serve with handler to handle requests on incoming packets.
 // i.e. ListenAndServeIf("eth0",handler)
 func ListenAndServeIfUnicast(interfaceNet *Interface, handler Handler, jobs chan job, ctx context.Context) error {
-	spew.Dump(interfaceNet)
+
 	iface, err := net.InterfaceByName(interfaceNet.Name)
 	if err != nil {
 		return err
