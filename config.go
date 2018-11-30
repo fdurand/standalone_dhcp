@@ -43,6 +43,7 @@ type Interface struct {
 	Ipv6          net.IP
 	InterfaceType string
 	relayIP       net.IP
+	listenPort    int
 }
 
 type Network struct {
@@ -85,6 +86,7 @@ func (d *Interfaces) readConfig() {
 		ethIf.intNet = eth
 		ethIf.Name = eth.Name
 		ethIf.InterfaceType = "server"
+		ethIf.listenPort = 67
 
 		adresses, _ := eth.Addrs()
 		for _, adresse := range adresses {
@@ -186,7 +188,7 @@ func (d *Interfaces) readConfig() {
 		iface, _ := net.InterfaceByName(interfaceConfig[0])
 		ethIf.intNet = iface
 		ethIf.Name = iface.Name
-
+		ethIf.listenPort = 68
 		interfaceIP, _ := iface.Addrs()
 		for _, ip := range interfaceIP {
 			ip := ip

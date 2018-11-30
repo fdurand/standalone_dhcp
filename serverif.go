@@ -113,7 +113,7 @@ func ListenAndServeIfUnicast(interfaceNet *Interface, handler Handler, jobs chan
 		return err
 	}
 
-	p, err := UnicastOpen(interfaceNet, 67)
+	p, err := UnicastOpen(interfaceNet)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func ListenAndServeIfUnicast(interfaceNet *Interface, handler Handler, jobs chan
 	return ServeIf(iface.Index, p, handler, jobs, ctx)
 }
 
-func UnicastOpen(interfaceNet *Interface, port int) (*ipv4.PacketConn, error) {
+func UnicastOpen(interfaceNet *Interface) (*ipv4.PacketConn, error) {
 	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
 	if err != nil {
 		log.Fatal(err)
@@ -135,7 +135,7 @@ func UnicastOpen(interfaceNet *Interface, port int) (*ipv4.PacketConn, error) {
 			log.Fatal(err)
 		}
 	}
-	lsa := syscall.SockaddrInet4{Port: port}
+	lsa := syscall.SockaddrInet4{Port: interfaceNet.listenPort}
 	copy(lsa.Addr[:], interfaceNet.Ipv4.To4())
 
 	if err = syscall.Bind(s, &lsa); err != nil {
