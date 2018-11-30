@@ -211,7 +211,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 
 	if h.InterfaceType == "relay" {
 
-		// answer.srvIP = net.Addr{handler.srvIP.To4(), 68}
+		answer.relayIP = h.relayIP
 		answer.dhcpType = h.InterfaceType
 
 		switch msgType {

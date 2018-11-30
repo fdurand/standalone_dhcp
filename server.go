@@ -14,7 +14,7 @@ type Answer struct {
 	MAC      net.HardwareAddr
 	Iface    *net.Interface
 	SrcIP    net.IP
-	srvIP    net.Addr
+	relayIP  net.IP
 	Local    bool
 	dhcpType string
 }
@@ -77,6 +77,7 @@ func Serve(conn *serveIfConn, handler Handler, jobs chan job, ctx context.Contex
 		}
 		var dhcprequest dhcp.Packet
 		dhcprequest = append([]byte(nil), req...)
+		// addr is source ip address cm.Dst is the target
 		jobe := job{dhcprequest, reqType, handler, addr, cm.Dst, conn, ctx}
 		go func() {
 			jobs <- jobe
