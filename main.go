@@ -174,40 +174,6 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	answer.Iface = h.intNet
 	answer.Local = false
 
-	ipStr, _, _ := net.SplitHostPort(srcIP.String())
-	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
-	for _, v := range h.network {
-		// Case of a l2 dhcp request
-		if net.ParseIP(ipStr).Equal(net.IPv4zero) && (p.GIAddr().Equal(net.IPv4zero) || v.network.Contains(p.CIAddr())) {
-			answer.Local = true
-			// Case we are in L3
-			if !p.CIAddr().Equal(net.IPv4zero) && !v.network.Contains(p.CIAddr()) {
-				continue
-			}
-			handler = v.dhcpHandler
-			break
-		}
-		// Case dhcprequest from an already assigned l3 ip address
-		if p.GIAddr().Equal(net.IPv4zero) && v.network.Contains(p.CIAddr()) {
-			handler = v.dhcpHandler
-			break
-		}
-
-		if (!p.GIAddr().Equal(net.IPv4zero) && v.network.Contains(p.GIAddr())) || v.network.Contains(p.CIAddr()) {
-			handler = v.dhcpHandler
-			break
-		}
-	}
-
-	if len(handler.ip) == 0 {
-		return answer
-	}
-	defer recoverName(options)
-
-	log.LoggerWContext(ctx).Debug(p.CHAddr().String() + " " + msgType.String() + " xID " + sharedutils.ByteToString(p.XId()))
-
-	id, _ := GlobalTransactionLock.Lock()
-
 	// DHCP Relay
 
 	if h.InterfaceType == "relay" {
@@ -222,7 +188,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			// h.m[string(p.XId())] = true
 			p2 := dhcp.NewPacket(dhcp.BootRequest)
 			p2.SetCHAddr(p.CHAddr())
-			p2.SetGIAddr(handler.ip)
+			p2.SetGIAddr(h.Ipv4)
 			p2.SetXId(p.XId())
 			p2.SetBroadcast(false)
 			for k, v := range p.ParseOptions() {
@@ -266,7 +232,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			p2.SetFile(p.File())
 			p2.SetCIAddr(p.CIAddr())
 			p2.SetSIAddr(p.SIAddr())
-			p2.SetGIAddr(handler.ip)
+			p2.SetGIAddr(h.Ipv4)
 			p2.SetXId(p.XId())
 			p2.SetBroadcast(false)
 			for k, v := range p.ParseOptions() {
@@ -327,7 +293,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			p2.SetFile(p.File())
 			p2.SetCIAddr(p.CIAddr())
 			p2.SetSIAddr(p.SIAddr())
-			p2.SetGIAddr(handler.ip)
+			p2.SetGIAddr(h.Ipv4)
 			p2.SetXId(p.XId())
 			p2.SetBroadcast(false)
 			for k, v := range p.ParseOptions() {
@@ -338,6 +304,40 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 		}
 		return answer
 	} else {
+
+		ipStr, _, _ := net.SplitHostPort(srcIP.String())
+		ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
+		for _, v := range h.network {
+			// Case of a l2 dhcp request
+			if net.ParseIP(ipStr).Equal(net.IPv4zero) && (p.GIAddr().Equal(net.IPv4zero) || v.network.Contains(p.CIAddr())) {
+				answer.Local = true
+				// Case we are in L3
+				if !p.CIAddr().Equal(net.IPv4zero) && !v.network.Contains(p.CIAddr()) {
+					continue
+				}
+				handler = v.dhcpHandler
+				break
+			}
+			// Case dhcprequest from an already assigned l3 ip address
+			if p.GIAddr().Equal(net.IPv4zero) && v.network.Contains(p.CIAddr()) {
+				handler = v.dhcpHandler
+				break
+			}
+
+			if (!p.GIAddr().Equal(net.IPv4zero) && v.network.Contains(p.GIAddr())) || v.network.Contains(p.CIAddr()) {
+				handler = v.dhcpHandler
+				break
+			}
+		}
+
+		if len(handler.ip) == 0 {
+			return answer
+		}
+		defer recoverName(options)
+
+		log.LoggerWContext(ctx).Debug(p.CHAddr().String() + " " + msgType.String() + " xID " + sharedutils.ByteToString(p.XId()))
+
+		id, _ := GlobalTransactionLock.Lock()
 
 		cacheKey := p.CHAddr().String() + " " + msgType.String() + " xID " + sharedutils.ByteToString(p.XId())
 		if _, found := GlobalTransactionCache.Get(cacheKey); found {
