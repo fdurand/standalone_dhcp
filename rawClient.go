@@ -10,6 +10,7 @@ import (
 
 	"syscall"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/mdlayher/ethernet"
 	"github.com/mdlayher/raw"
 )
@@ -219,8 +220,11 @@ func sendUnicastDHCP(dhcp []byte, dstIP net.IP, srcIP net.IP, giAddr net.IP, src
 	var udpsrc int
 	var udpdst int
 
-	ipStr, portStr, _ := net.SplitHostPort(dstIP.String())
+	ipStr, portStr, err := net.SplitHostPort(dstIP.String())
 
+	if err != nil {
+		ipStr = dstIP.String()
+	}
 	// Keep as is for futur test
 	if !(net.ParseIP(ipStr).Equal(giAddr)) {
 		if !(giAddr.Equal(net.IPv4zero)) {
@@ -248,6 +252,12 @@ func sendUnicastDHCP(dhcp []byte, dstIP net.IP, srcIP net.IP, giAddr net.IP, src
 			dst: uint16(udpdst),
 		}
 	}
+	spew.Dump(dstIP)
+	spew.Dump(ipStr)
+	spew.Dump(udpdst)
+	spew.Dump(srcIP)
+	spew.Dump(udpsrc)
+
 	udplen := 8 + len(dhcp)
 
 	ip := iphdr{

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	_ "expvar"
+	"fmt"
 	"net"
 	"strconv"
 
@@ -28,6 +29,7 @@ func doWork(id int, jobe job) {
 		if ans.dhcpType == "relay" {
 			switch jobe.msgType {
 			case dhcp.Discover:
+				fmt.Println("i am here")
 				sendUnicastDHCP(ans.D, ans.relayIP, ans.SrcIP, jobe.p.GIAddr(), 68, 67)
 			case dhcp.Offer:
 				client, _ := NewRawClient(ans.Iface)
