@@ -42,6 +42,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	answer.SrcIP = h.Ipv4
 	answer.Iface = h.intNet
 	answer.Local = false
+	ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
 
 	// DHCP Relay
 
@@ -53,8 +54,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 		switch msgType {
 
 		case dhcp.Discover:
-			fmt.Println("discover ", p.YIAddr(), "from", p.CHAddr())
-			// h.m[string(p.XId())] = true
+			log.LoggerWContext(ctx).Info("DISCOVER ", p.YIAddr(), "from", p.CHAddr())
 			p2 := dhcp.NewPacket(dhcp.BootRequest)
 			p2.SetCHAddr(p.CHAddr())
 			p2.SetGIAddr(h.Ipv4)
@@ -73,7 +73,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 					sip = v
 				}
 			}
-			fmt.Println("offering from", sip.String(), p.YIAddr(), "to", p.CHAddr())
+			log.LoggerWContext(ctx).Info("OFFER from", sip.String(), p.YIAddr(), "to", p.CHAddr())
 			p2 := dhcp.NewPacket(dhcp.BootReply)
 			p2.SetXId(p.XId())
 			p2.SetFile(p.File())
@@ -91,7 +91,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			return answer
 
 		case dhcp.Request:
-			fmt.Println("request ", p.YIAddr(), "from", p.CHAddr())
+			log.LoggerWContext(ctx).Info("REQUEST ", p.YIAddr(), "from", p.CHAddr())
 			p2 := dhcp.NewPacket(dhcp.BootRequest)
 			p2.SetCHAddr(p.CHAddr())
 			p2.SetFile(p.File())
@@ -113,7 +113,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 					sip = v
 				}
 			}
-			fmt.Println("ACK from", sip.String(), p.YIAddr(), "to", p.CHAddr())
+			log.LoggerWContext(ctx).Info("ACK from ", sip.String(), p.YIAddr(), " to ", p.CHAddr())
 			p2 := dhcp.NewPacket(dhcp.BootReply)
 			p2.SetXId(p.XId())
 			p2.SetFile(p.File())
@@ -130,7 +130,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			return answer
 
 		case dhcp.NAK:
-			fmt.Println("NAK from", p.SIAddr(), p.YIAddr(), "to", p.CHAddr())
+			log.LoggerWContext(ctx).Info("NAK from ", p.SIAddr(), p.YIAddr(), "to", p.CHAddr())
 			p2 := dhcp.NewPacket(dhcp.BootReply)
 			p2.SetXId(p.XId())
 			p2.SetFile(p.File())
@@ -165,7 +165,7 @@ func (h *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	} else {
 
 		ipStr, _, _ := net.SplitHostPort(srcIP.String())
-		ctx = log.AddToLogContext(ctx, "mac", answer.MAC.String())
+
 		for _, v := range h.network {
 			// Case of a l2 dhcp request
 			if net.ParseIP(ipStr).Equal(net.IPv4zero) && (p.GIAddr().Equal(net.IPv4zero) || v.network.Contains(p.CIAddr())) {
