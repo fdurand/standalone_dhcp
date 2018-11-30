@@ -97,8 +97,12 @@ func (d *Interfaces) readConfig() {
 			if a == b {
 				continue
 			}
-			if IP.To4() == nil {
+			if IsIPv6(IP) {
+				ethIf.Ipv6 = IP
 				continue
+			}
+			if IsIPv4(IP) {
+				ethIf.Ipv4 = IP
 			}
 
 			ethIf.layer2 = append(ethIf.layer2, NetIP)
@@ -190,8 +194,12 @@ func (d *Interfaces) readConfig() {
 		for _, ip := range interfaceIP {
 			ip := ip
 			listenIP, NetIP, _ := net.ParseCIDR(ip.String())
-			if listenIP.To4() == nil {
+			if IsIPv6(listenIP) {
+				ethIf.Ipv6 = listenIP
 				continue
+			}
+			if IsIPv4(listenIP) {
+				ethIf.Ipv4 = listenIP
 			}
 			ethIf.layer2 = append(ethIf.layer2, NetIP)
 			ethIf.relayIP = net.ParseIP(interfaceConfig[1])

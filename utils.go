@@ -132,3 +132,11 @@ func ExcludeIP(dhcpHandler *DHCPHandler, ip_range string) {
 		}
 	}
 }
+
+func IsIPv4(address net.IP) bool {
+	return strings.Count(address.String(), ":") < 2
+}
+
+func IsIPv6(address net.IP) bool {
+	return strings.Count(address.String(), ":") >= 2
+}
