@@ -53,13 +53,13 @@ func ServeIf(ifIndex int, p *ipv4.PacketConn, handler Handler, jobs chan job, ct
 // ListenAndServeIf listens on the UDP network address addr and then calls
 // Serve with handler to handle requests on incoming packets.
 // i.e. ListenAndServeIf("eth0",handler)
-func ListenAndServeIf(interfaceName string, handler Handler, jobs chan job, ctx context.Context) error {
-	iface, err := net.InterfaceByName(interfaceName)
+func ListenAndServeIf(interfaceNet *Interface, handler Handler, jobs chan job, ctx context.Context) error {
+	iface, err := net.InterfaceByName(interfaceNet.Name)
 	if err != nil {
 		return err
 	}
 
-	p, err := broadcastOpen(net.IPv4zero, 67, interfaceName)
+	p, err := broadcastOpen(net.IPv4zero, 67, interfaceNet.Name)
 	if err != nil {
 		return err
 	}
@@ -106,13 +106,13 @@ func broadcastOpen(bindAddr net.IP, port int, ifname string) (*ipv4.PacketConn, 
 // ListenAndServeIf listens on the UDP network address addr and then calls
 // Serve with handler to handle requests on incoming packets.
 // i.e. ListenAndServeIf("eth0",handler)
-func ListenAndServeIfUnicast(interfaceName string, handler Handler, jobs chan job, ip net.IP, dhcpType string, ctx context.Context) error {
-	iface, err := net.InterfaceByName(interfaceName)
+func ListenAndServeIfUnicast(interfaceNet *Interface, handler Handler, jobs chan job, ctx context.Context) error {
+	iface, err := net.InterfaceByName(interfaceNet.Name)
 	if err != nil {
 		return err
 	}
 
-	p, err := UnicastOpen(ip, 67, interfaceName, dhcpType)
+	p, err := UnicastOpen(interfaceNet, 67)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func ListenAndServeIfUnicast(interfaceName string, handler Handler, jobs chan jo
 	return ServeIf(iface.Index, p, handler, jobs, ctx)
 }
 
-func UnicastOpen(bindAddr net.IP, port int, ifname string, dhcpType string) (*ipv4.PacketConn, error) {
+func UnicastOpen(interfaceNet *Interface, port int) (*ipv4.PacketConn, error) {
 	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
 	if err != nil {
 		log.Fatal(err)
@@ -129,13 +129,13 @@ func UnicastOpen(bindAddr net.IP, port int, ifname string, dhcpType string) (*ip
 	if err = syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
 		log.Fatal(err)
 	}
-	if dhcpType != "relay" {
-		if err = syscall.SetsockoptString(s, syscall.SOL_SOCKET, syscall.SO_BINDTODEVICE, ifname); err != nil {
+	if interfaceNet.InterfaceType != "relay" {
+		if err = syscall.SetsockoptString(s, syscall.SOL_SOCKET, syscall.SO_BINDTODEVICE, interfaceNet.Name); err != nil {
 			log.Fatal(err)
 		}
 	}
 	lsa := syscall.SockaddrInet4{Port: port}
-	copy(lsa.Addr[:], bindAddr.To4())
+	copy(lsa.Addr[:], interfaceNet.Ipv4.To4())
 
 	if err = syscall.Bind(s, &lsa); err != nil {
 		syscall.Close(s)

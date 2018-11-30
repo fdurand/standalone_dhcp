@@ -28,8 +28,6 @@ type DHCPHandler struct {
 	xid           *cache.Cache
 	available     *pool.DHCPPool // DHCPPool keeps track of the available IPs in the pool
 	role          string
-	dhcpType      string
-	srvIP         net.IP
 	ipReserved    string
 }
 
@@ -38,12 +36,14 @@ type Interfaces struct {
 }
 
 type Interface struct {
-	Name    string
-	intNet  *net.Interface
-	network []Network
-	layer2  []*net.IPNet
-	Ipv4    net.IP
-	Ipv6    net.IP
+	Name          string
+	intNet        *net.Interface
+	network       []Network
+	layer2        []*net.IPNet
+	Ipv4          net.IP
+	Ipv6          net.IP
+	InterfaceType string
+	relayIP       net.IP
 }
 
 type Network struct {
@@ -85,6 +85,7 @@ func (d *Interfaces) readConfig() {
 
 		ethIf.intNet = eth
 		ethIf.Name = eth.Name
+		ethIf.InterfaceType = "server"
 
 		adresses, _ := eth.Addrs()
 		for _, adresse := range adresses {
@@ -117,7 +118,6 @@ func (d *Interfaces) readConfig() {
 
 						var DHCPNet Network
 						var DHCPScope DHCPHandler
-						DHCPScope.dhcpType = "server"
 						DHCPNet.network.IP = net.ParseIP(netWork[1])
 						DHCPNet.network.Mask = net.IPMask(net.ParseIP(sec.Key("netmask").String()))
 						DHCPScope.ip = IP.To4()
@@ -179,6 +179,7 @@ func (d *Interfaces) readConfig() {
 			continue
 		}
 		var ethIf Interface
+		ethIf.InterfaceType = "relay"
 
 		interfaceConfig := strings.Split(result[i], ":")
 		iface, _ := net.InterfaceByName(interfaceConfig[0])
@@ -193,13 +194,7 @@ func (d *Interfaces) readConfig() {
 				continue
 			}
 			ethIf.layer2 = append(ethIf.layer2, NetIP)
-			var DHCPNet Network
-			var DHCPScope DHCPHandler
-			DHCPScope.ip = listenIP
-			DHCPScope.dhcpType = "relay"
-			DHCPScope.srvIP = net.ParseIP(interfaceConfig[1])
-			DHCPNet.dhcpHandler = DHCPScope
-			ethIf.network = append(ethIf.network, DHCPNet)
+			ethIf.relayIP = net.ParseIP(interfaceConfig[1])
 		}
 		d.intsNet = append(d.intsNet, ethIf)
 	}
