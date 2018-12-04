@@ -49,7 +49,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 		switch msgType {
 
 		case dhcp.Discover:
-			log.LoggerWContext(ctx).Info("DISCOVER ", p.YIAddr(), "from", p.CHAddr())
+			log.LoggerWContext(ctx).Info("RELAY - DISCOVER " + p.YIAddr().String() + " from " + p.CHAddr().String())
 			p2 := dhcp.NewPacket(dhcp.BootRequest)
 			p2.SetCHAddr(p.CHAddr())
 			p2.SetGIAddr(I.Ipv4)
@@ -68,7 +68,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 					sip = v
 				}
 			}
-			log.LoggerWContext(ctx).Info("OFFER from", sip.String(), p.YIAddr(), "to", p.CHAddr())
+			log.LoggerWContext(ctx).Info("RELAY - OFFER from " + sip.String() + " " + p.YIAddr().String() + " to " + p.CHAddr().String())
 			p2 := dhcp.NewPacket(dhcp.BootReply)
 			p2.SetXId(p.XId())
 			p2.SetFile(p.File())
@@ -86,7 +86,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			return answer
 
 		case dhcp.Request:
-			log.LoggerWContext(ctx).Info("REQUEST ", p.YIAddr(), "from", p.CHAddr())
+			log.LoggerWContext(ctx).Info("RELAY - REQUEST " + p.YIAddr().String() + " from " + p.CHAddr().String())
 			p2 := dhcp.NewPacket(dhcp.BootRequest)
 			p2.SetCHAddr(p.CHAddr())
 			p2.SetFile(p.File())
@@ -108,7 +108,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 					sip = v
 				}
 			}
-			log.LoggerWContext(ctx).Info("ACK from ", sip.String(), p.YIAddr(), " to ", p.CHAddr())
+			log.LoggerWContext(ctx).Info("RELAY - ACK from " + sip.String() + " " + p.YIAddr().String() + " to " + p.CHAddr().String())
 			p2 := dhcp.NewPacket(dhcp.BootReply)
 			p2.SetXId(p.XId())
 			p2.SetFile(p.File())
@@ -125,7 +125,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			return answer
 
 		case dhcp.NAK:
-			log.LoggerWContext(ctx).Info("NAK from ", p.SIAddr(), p.YIAddr(), "to", p.CHAddr())
+			log.LoggerWContext(ctx).Info("RELAY - NAK from " + p.YIAddr().String() + " from " + p.CHAddr().String())
 			p2 := dhcp.NewPacket(dhcp.BootReply)
 			p2.SetXId(p.XId())
 			p2.SetFile(p.File())
@@ -142,6 +142,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			return answer
 
 		case dhcp.Release, dhcp.Decline:
+			log.LoggerWContext(ctx).Info("RELAY - RELEASE/DECLINE from " + p.SIAddr().String() + " " + p.YIAddr().String() + " to " + p.CHAddr().String())
 			p2 := dhcp.NewPacket(dhcp.BootRequest)
 			p2.SetCHAddr(p.CHAddr())
 			p2.SetFile(p.File())
