@@ -61,7 +61,7 @@ func newDHCPConfig() *Interfaces {
 
 func (d *Interfaces) readConfig() {
 
-	cfg, err := ini.Load("config.ini")
+	cfg, err := ini.Load("/usr/local/etc/godhcp.ini")
 	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
 		os.Exit(1)

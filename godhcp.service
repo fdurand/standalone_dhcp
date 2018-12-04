@@ -1,0 +1,15 @@
+[Unit]
+Description=GO DHCPv4 Server/Relay Daemon
+After=syslog.target network.target
+
+[Service]
+StartLimitBurst=3
+StartLimitInterval=60
+Type=notify
+WatchdogSec=30s
+ExecStart=/usr/local/sbin/standalone_dhcp
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
