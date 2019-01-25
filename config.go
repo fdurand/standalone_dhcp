@@ -11,8 +11,8 @@ import (
 	"time"
 
 	cache "github.com/fdurand/go-cache"
+	"github.com/fdurand/standalone_dhcp/pool"
 	"github.com/go-ini/ini"
-	"github.com/inverse-inc/packetfence/go/dhcp/pool"
 	"github.com/inverse-inc/packetfence/go/log"
 	dhcp "github.com/krolaw/dhcp4"
 )
@@ -135,9 +135,9 @@ func (d *Interfaces) readConfig() {
 						seconds, _ := strconv.Atoi(sec.Key("dhcp_default_lease_time").String())
 						DHCPScope.leaseDuration = time.Duration(seconds) * time.Second
 						DHCPScope.leaseRange = dhcp.IPRange(net.ParseIP(sec.Key("dhcp_start").String()), net.ParseIP(sec.Key("dhcp_end").String()))
-
+						algorithm, _ := strconv.Atoi(sec.Key("algorithm").String())
 						// Initialize dhcp pool
-						available := pool.NewDHCPPool(uint64(dhcp.IPRange(net.ParseIP(sec.Key("dhcp_start").String()), net.ParseIP(sec.Key("dhcp_end").String()))))
+						available := pool.NewDHCPPool(uint64(dhcp.IPRange(net.ParseIP(sec.Key("dhcp_start").String()), net.ParseIP(sec.Key("dhcp_end").String()))), algorithm)
 						DHCPScope.available = available
 
 						// Initialize hardware cache
@@ -145,8 +145,8 @@ func (d *Interfaces) readConfig() {
 
 						hwcache.OnEvicted(func(nic string, pool interface{}) {
 							go func() {
-								// Always wait 10 minutes before releasing the IP again
-								time.Sleep(10 * time.Minute)
+								// Always wait 30 seconds before releasing the IP again
+								time.Sleep(30 * time.Second)
 								log.LoggerWContext(ctx).Info(nic + " " + dhcp.IPAdd(DHCPScope.start, pool.(int)).String() + " Added back in the pool " + DHCPScope.role + " on index " + strconv.Itoa(pool.(int)))
 								DHCPScope.available.FreeIPIndex(uint64(pool.(int)))
 							}()
