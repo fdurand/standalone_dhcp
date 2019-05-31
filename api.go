@@ -107,7 +107,7 @@ func handleMac2Ip(res http.ResponseWriter, req *http.Request) {
 
 func handleAllStats(res http.ResponseWriter, req *http.Request) {
 	var result Items
-	cfg, err := ini.Load("config.ini")
+	cfg, err := ini.Load("/usr/local/etc/godhcp.ini")
 	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
 		os.Exit(1)
