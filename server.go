@@ -8,14 +8,16 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
+// Answer struct
 type Answer struct {
-	D   dhcp.Packet
-	IP  net.IP
-	MAC net.HardwareAddr
+	D     dhcp.Packet
+	IP    net.IP
+	MAC   net.HardwareAddr
+	SrcIP net.IP //Only for inline splitted network
 }
 
 type Handler interface {
-	ServeDHCP(ctx context.Context, req dhcp.Packet, msgType dhcp.MessageType, srcIP net.Addr) Answer
+	ServeDHCP(ctx context.Context, req dhcp.Packet, msgType dhcp.MessageType, srcIP net.Addr, srvIP net.IP) Answer
 }
 
 // ServeConn is the bare minimum connection functions required by Serve()

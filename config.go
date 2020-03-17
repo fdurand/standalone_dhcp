@@ -17,8 +17,10 @@ import (
 	dhcp "github.com/krolaw/dhcp4"
 )
 
+// DHCPHandler struct
 type DHCPHandler struct {
-	ip            net.IP        // Server IP to use
+	ip            net.IP // Server IP to use
+	vip           net.IP
 	options       dhcp.Options  // Options to send to DHCP Clients
 	start         net.IP        // Start of IP range to distribute
 	leaseRange    int           // Number of IPs to distribute (starting from start)
@@ -26,8 +28,10 @@ type DHCPHandler struct {
 	hwcache       *cache.Cache
 	xid           *cache.Cache
 	available     *pool.DHCPPool // DHCPPool keeps track of the available IPs in the pool
+	layer2        bool
 	role          string
 	ipReserved    string
+	ipAssigned    map[string]uint32
 }
 
 type Interfaces struct {
@@ -48,7 +52,7 @@ type Interface struct {
 
 type Network struct {
 	network     net.IPNet
-	dhcpHandler DHCPHandler
+	dhcpHandler *DHCPHandler
 }
 
 const bootp_client = 68
@@ -125,7 +129,8 @@ func (d *Interfaces) readConfig() {
 						}
 
 						var DHCPNet Network
-						var DHCPScope DHCPHandler
+						var DHCPScope *DHCPHandler
+						DHCPScope = &DHCPHandler{}
 						DHCPNet.network.IP = net.ParseIP(netWork[1])
 						DHCPNet.network.Mask = net.IPMask(net.ParseIP(sec.Key("netmask").String()))
 						DHCPScope.ip = IP.To4()
@@ -158,7 +163,7 @@ func (d *Interfaces) readConfig() {
 
 						DHCPScope.xid = xid
 
-						ExcludeIP(&DHCPScope, sec.Key("ip_reserved").String())
+						ExcludeIP(DHCPScope, sec.Key("ip_reserved").String())
 						DHCPScope.ipReserved = sec.Key("ip_reserved").String()
 
 						var options = make(map[dhcp.OptionCode][]byte)

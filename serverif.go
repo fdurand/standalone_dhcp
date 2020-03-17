@@ -53,7 +53,7 @@ func ServeIf(ifIndex int, p *ipv4.PacketConn, handler Handler, jobs chan job, in
 // ListenAndServeIf listens on the UDP network address addr and then calls
 // Serve with handler to handle requests on incoming packets.
 // i.e. ListenAndServeIf("eth0",handler)
-func ListenAndServeIf(interfaceNet *Interface, handler Handler, jobs chan job, ctx context.Context) error {
+func ListenAndServeIf(ctx context.Context, interfaceNet *Interface, handler Handler, jobs chan job) error {
 	iface, err := net.InterfaceByName(interfaceNet.Name)
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func broadcastOpen(bindAddr net.IP, port int, ifname string) (*ipv4.PacketConn, 
 // ListenAndServeIf listens on the UDP network address addr and then calls
 // Serve with handler to handle requests on incoming packets.
 // i.e. ListenAndServeIf("eth0",handler)
-func ListenAndServeIfUnicast(interfaceNet *Interface, handler Handler, jobs chan job, ctx context.Context) error {
+func ListenAndServeIfUnicast(ctx context.Context, interfaceNet *Interface, handler Handler, jobs chan job) error {
 
 	iface, err := net.InterfaceByName(interfaceNet.Name)
 	if err != nil {

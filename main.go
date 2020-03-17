@@ -91,7 +91,7 @@ func main() {
 		// Create a channel for each interfaces
 		intNametoInterface[v.Name] = &v
 		go func() {
-			v.runUnicast(jobs, ctx)
+			v.runUnicast(ctx, jobs)
 		}()
 
 	}
@@ -100,7 +100,7 @@ func main() {
 	for _, v := range DHCPConfig.intsNet {
 		v := v
 		go func() {
-			v.run(jobs, ctx)
+			v.run(ctx, jobs)
 		}()
 	}
 

@@ -140,3 +140,10 @@ func IsIPv4(address net.IP) bool {
 func IsIPv6(address net.IP) bool {
 	return strings.Count(address.String(), ":") >= 2
 }
+
+func setOptionServerIdentifier(srvIP net.IP, handlerIP net.IP) net.IP {
+	if srvIP.Equal(handlerIP) || srvIP.Equal(net.IPv4zero) || srvIP.Equal(net.IPv4bcast) {
+		return handlerIP
+	}
+	return srvIP
+}
