@@ -42,7 +42,7 @@ const FreeMac = "00:00:00:00:00:00"
 const FakeMac = "ff:ff:ff:ff:ff:ff"
 
 func main() {
-	log.SetProcessName("pfdhcp")
+	log.SetProcessName("godhcp")
 	ctx = log.LoggerNewContext(ctx)
 	arp.AutoRefresh(30 * time.Second)
 	// Default http timeout
@@ -115,7 +115,7 @@ func main() {
 	router.HandleFunc("/api/v1/dhcp/debug/{int:.*}/{role:(?:[^/]*)}", handleDebug).Methods("GET")
 
 	srv := &http.Server{
-		Addr:        "127.0.0.1:22222",
+		Addr:        "127.0.0.1:22227",
 		IdleTimeout: 5 * time.Second,
 		Handler:     router,
 	}
@@ -130,7 +130,7 @@ func main() {
 		}
 		cli := &http.Client{}
 		for {
-			req, err := http.NewRequest("GET", "http://127.0.0.1:22222", nil)
+			req, err := http.NewRequest("GET", "http://127.0.0.1:22227", nil)
 			if err != nil {
 				log.LoggerWContext(ctx).Error(err.Error())
 				continue

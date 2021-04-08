@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	cache "github.com/fdurand/go-cache"
 	"github.com/fdurand/standalone_dhcp/pool"
 	"github.com/go-ini/ini"
@@ -79,7 +80,7 @@ func (d *Interfaces) readConfig() {
 
 	for _, v := range NetInterfaces {
 		eth, err := net.InterfaceByName(v)
-
+		spew.Dump(eth)
 		if err != nil {
 			log.LoggerWContext(ctx).Error("Cannot find interface " + v + " on the system due to an error: " + err.Error())
 			continue
@@ -165,7 +166,7 @@ func (d *Interfaces) readConfig() {
 
 						ExcludeIP(DHCPScope, sec.Key("ip_reserved").String())
 						DHCPScope.ipReserved = sec.Key("ip_reserved").String()
-
+						DHCPScope.layer2 = true
 						var options = make(map[dhcp.OptionCode][]byte)
 
 						options[dhcp.OptionSubnetMask] = []byte(net.ParseIP(sec.Key("netmask").String()).To4())

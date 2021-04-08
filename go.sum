@@ -147,7 +147,6 @@ github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga
 github.com/fdurand/arp v0.0.0-20180807174648-27b38d3af1be h1:44e5trFpGDfqFWKpYUtcXTAPWrL6y19WITtYLNKupjU=
 github.com/fdurand/arp v0.0.0-20180807174648-27b38d3af1be/go.mod h1:XLQwuRqf7f3RjNreAmdPASlBU6/juBaoMzI93a7De1s=
 github.com/fdurand/go-cache v0.0.0-20180104143916-cf0198ac7d92/go.mod h1:v+JY1cLdRxXdjkw/PMyO810oIdqhpXxnOBf8xxWyewQ=
-github.com/fdurand/go-cache v1.0.0 h1:kHGCJQRGGGh0YAJnLZaqPhw9m/30a5akG59E/CCgfrc=
 github.com/fdurand/go-cache v2.1.0+incompatible h1:nFqrocP6WUddzZD55++xGD9lIY6OjeOfoWTogHamQ0E=
 github.com/fdurand/go-cache v2.1.0+incompatible/go.mod h1:v+JY1cLdRxXdjkw/PMyO810oIdqhpXxnOBf8xxWyewQ=
 github.com/fdurand/standalone_dhcp v0.0.0-20200317013142-1c360f7ef46c h1:Q0eWjMtub/or/AvknldESofJ2gIBi+QEFiOqLbgzsr4=
@@ -313,7 +312,6 @@ github.com/infobloxopen/go-trees v0.0.0-20190313150506-2af4e13f9062/go.mod h1:Pc
 github.com/inverse-inc/dhcp4 v0.0.0-20200625173842-2c4d1e50d7ca/go.mod h1:lvc5S3uPg6xat1wRFAA0ru/DfIV6YOmMK6E754FUEuo=
 github.com/inverse-inc/go-ipset v0.0.0-20190925174109-4d5749cc4aa6/go.mod h1:unv1cVDLrlwXyLhg2b+QkK6rZ0GQ6DGbZOkGCfl10/M=
 github.com/inverse-inc/go-radius v0.0.0-20201019132414-82756e2d8d47/go.mod h1:IQmy9DslBZ9lU4/y/MphJ9oY//4r9A9wQwqOjjLmBso=
-github.com/inverse-inc/packetfence v10.2.0+incompatible h1:UPUXdIiToyhDa8GxAa76yJV5NOOSBxuYd+vy7t9w5IU=
 github.com/inverse-inc/packetfence/go v0.0.0-20210406133326-cf4af8f94502 h1:auQNMTgEbghDR+zhhL50sKRJJcfmsEYBdqhy6f2UxX0=
 github.com/inverse-inc/packetfence/go v0.0.0-20210406133326-cf4af8f94502/go.mod h1:Uxsoqc8vMF6ZDh0kh43MqJXysah5WSbQLGbofxfBuK0=
 github.com/inverse-inc/pkcs7 v0.0.0-20210120195334-f839fdbb1f84/go.mod h1:adBgAyadl5D9Mz9rhkQyzZpwcUK9eXdKslXH4oImbB0=
