@@ -28,7 +28,7 @@ dhcp_default_lease_time=30
 ## IP2MAC
 
 ```
-curl http://127.0.0.1:22222/api/v1/dhcp/ip/192.168.0.2 | python -m json.tool
+curl http://127.0.0.1:22227/api/v1/dhcp/ip/192.168.0.2 | python -m json.tool
 ```
 
 ```
@@ -43,7 +43,7 @@ curl http://127.0.0.1:22222/api/v1/dhcp/ip/192.168.0.2 | python -m json.tool
 ## MAC2IP
 
 ```
-curl http://127.0.0.1:22222/api/v1/dhcp/mac/10:1f:74:b2:f6:a5 | python -m json.tool
+curl http://127.0.0.1:22227/api/v1/dhcp/mac/10:1f:74:b2:f6:a5 | python -m json.tool
 ```
 
 ```
@@ -58,14 +58,14 @@ curl http://127.0.0.1:22222/api/v1/dhcp/mac/10:1f:74:b2:f6:a5 | python -m json.t
 ## Release IP
 
 ```
-curl -X "DELETE" http://127.0.0.1:22222/api/v1/dhcp/mac/10:1f:74:b2:f6:a5 | python -m json.tool
+curl -X "DELETE" http://127.0.0.1:22227/api/v1/dhcp/mac/10:1f:74:b2:f6:a5 | python -m json.tool
 ```
 
 
 ## Statistics
 
 ```
-curl http://127.0.0.1:22222/api/v1/dhcp/stats/eth1.137 | python -m json.tool
+curl http://127.0.0.1:22227/api/v1/dhcp/stats/eth1.137 | python -m json.tool
 ```
 
 ```

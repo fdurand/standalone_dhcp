@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	cache "github.com/fdurand/go-cache"
 	"github.com/fdurand/standalone_dhcp/pool"
 	"github.com/go-ini/ini"
@@ -80,7 +79,6 @@ func (d *Interfaces) readConfig() {
 
 	for _, v := range NetInterfaces {
 		eth, err := net.InterfaceByName(v)
-		spew.Dump(eth)
 		if err != nil {
 			log.LoggerWContext(ctx).Error("Cannot find interface " + v + " on the system due to an error: " + err.Error())
 			continue
