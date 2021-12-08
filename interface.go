@@ -218,7 +218,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 		firstTry := true
 		log.LoggerWContext(ctx).Info("DHCPDISCOVER from " + clientMac + " (" + clientHostname + ")")
 		var free int
-
+		free = -1
 		// Search in the cache if the mac address already get assigned
 		if x, found := handler.hwcache.Get(p.CHAddr().String()); found {
 			log.LoggerWContext(ctx).Debug("Found in the cache that a IP has already been assigned")
@@ -279,7 +279,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			}
 
 			// If we still haven't found an IP address to offer, we get the next one
-			if free == 0 {
+			if free == -1 {
 				log.LoggerWContext(ctx).Debug("Grabbing next available IP")
 				freeu64, _, err := handler.available.GetFreeIPIndex(p.CHAddr().String())
 
