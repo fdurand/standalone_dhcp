@@ -267,7 +267,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 					// The ip is free use it
 					err, returnedMac = handler.available.ReserveIPIndex(uint64(element), p.CHAddr().String())
 					// Reserve the ip
-					if err != nil && returnedMac == p.CHAddr().String() {
+					if err == nil && returnedMac == p.CHAddr().String() {
 						log.LoggerWContext(ctx).Debug("The IP asked by the device is available in the pool")
 						free = int(element)
 					}
