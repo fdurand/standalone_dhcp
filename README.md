@@ -20,6 +20,7 @@ dhcpd=enabled
 netmask=255.255.255.0
 dhcp_end=192.168.1.254
 dhcp_default_lease_time=30
+ip_assigned=b8:27:eb:e8:40:43:192.168.1.251,d8:3a:dd:27:67:2c:192.168.1.252,b8:27:eb:42:93:bf:192.168.1.253
 ```
 
 
