@@ -161,9 +161,9 @@ func (d *Interfaces) readConfig() {
 						xid := cache.New(time.Duration(4)*time.Second, 2*time.Second)
 
 						DHCPScope.xid = xid
-
 						ExcludeIP(DHCPScope, sec.Key("ip_reserved").String())
 						DHCPScope.ipReserved = sec.Key("ip_reserved").String()
+						DHCPScope.ipAssigned, _ = AssignIP(DHCPScope, sec.Key("ip_assigned").String())
 						DHCPScope.layer2 = true
 						var options = make(map[dhcp.OptionCode][]byte)
 
@@ -212,4 +212,25 @@ func (d *Interfaces) readConfig() {
 		}
 		d.intsNet = append(d.intsNet, ethIf)
 	}
+}
+
+// AssignIP static IP address to a mac address and remove it from the pool
+func AssignIP(dhcpHandler *DHCPHandler, ipRange string) (map[string]uint32, []net.IP) {
+	couple := make(map[string]uint32)
+	var iplist []net.IP
+	if ipRange != "" {
+		rgx, _ := regexp.Compile("((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}):((?:[0-9]{1,3}.){3}(?:[0-9]{1,3}))")
+		ipRangeArray := strings.Split(ipRange, ",")
+		if len(ipRangeArray) >= 1 {
+			for _, rangeip := range ipRangeArray {
+				result := rgx.FindStringSubmatch(rangeip)
+				position := uint32(binary.BigEndian.Uint32(net.ParseIP(result[2]).To4())) - uint32(binary.BigEndian.Uint32(dhcpHandler.start.To4()))
+				// Remove the position in the roaming bitmap
+				dhcpHandler.available.ReserveIPIndex(uint64(position), result[1])
+				couple[result[1]] = position
+				iplist = append(iplist, net.ParseIP(result[2]))
+			}
+		}
+	}
+	return couple, iplist
 }
