@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 )
 
@@ -169,7 +170,7 @@ func (s tlvInt8t) Value(a []byte) interface{} {
 	return a
 }
 func (s tlvInt8t) String(a []byte) string {
-	return string(binary.BigEndian.Uint16(a))
+	return fmt.Sprintf("%d", binary.BigEndian.Uint16(a))
 }
 
 var TlvTypeCn TlvTypeCnt
