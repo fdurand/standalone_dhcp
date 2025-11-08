@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHCP Server Configuration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.15s ease-in-out;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .network-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #dee2e6;
+        }
+
+        .network-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .network-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DHCP Server Configuration</h1>
+            <p>Configure your standalone DHCP server settings</p>
+        </div>
+
+        <div class="content">
+            <div id="alertContainer"></div>
+            <div id="loadingIndicator" class="loading">Loading configuration...</div>
+            <div id="configForm" style="display: none;">
+                <!-- Interfaces Section -->
+                <div class="section">
+                    <div class="section-title">Network Interfaces</div>
+                    <div class="form-group">
+                        <label for="interfaces">Listen Interfaces</label>
+                        <input type="text" id="interfaces" placeholder="eth0,eth1">
+                        <div class="help-text">Comma-separated list of network interfaces to listen on</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="relay">Relay Interfaces (Optional)</label>
+                        <input type="text" id="relay" placeholder="eth1.2:172.20.0.1,eth1.3:172.21.0.1">
+                        <div class="help-text">Format: interface:relay_ip (comma-separated)</div>
+                    </div>
+                </div>
+
+                <!-- Networks Section -->
+                <div class="section">
+                    <div class="section-title">
+                        <span>Network Configurations</span>
+                        <button type="button" class="btn btn-success" onclick="addNetwork()">+ Add Network</button>
+                    </div>
+                    <div id="networksContainer"></div>
+                </div>
+
+                <!-- Actions -->
+                <div class="actions">
+                    <button type="button" class="btn btn-secondary" onclick="loadConfig()">Reset</button>
+                    <button type="button" class="btn btn-primary" onclick="saveConfig()">Save Configuration</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let configData = null;
+
+        // Load configuration on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+        });
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} show`;
+            alert.textContent = message;
+            alertContainer.appendChild(alert);
+
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        }
+
+        async function loadConfig() {
+            try {
+                document.getElementById('loadingIndicator').style.display = 'block';
+                document.getElementById('configForm').style.display = 'none';
+
+                const response = await fetch('/api/v1/config');
+                if (!response.ok) {
+                    throw new Error('Failed to load configuration');
+                }
+
+                configData = await response.json();
+                populateForm(configData);
+
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('configForm').style.display = 'block';
+            } catch (error) {
+                document.getElementById('loadingIndicator').textContent = 'Error loading configuration: ' + error.message;
+                showAlert('Error loading configuration: ' + error.message, 'error');
+            }
+        }
+
+        function populateForm(config) {
+            // Populate interfaces
+            document.getElementById('interfaces').value = (config.interfaces || []).join(',');
+            document.getElementById('relay').value = (config.relay || []).join(',');
+
+            // Populate networks
+            const networksContainer = document.getElementById('networksContainer');
+            networksContainer.innerHTML = '';
+
+            if (config.networks && config.networks.length > 0) {
+                config.networks.forEach((network, index) => {
+                    addNetwork(network, index);
+                });
+            } else {
+                networksContainer.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">No networks configured. Click "Add Network" to create one.</p>';
+            }
+        }
+
+        function addNetwork(networkData = null, index = null) {
+            const networksContainer = document.getElementById('networksContainer');
+
+            // Remove "no networks" message if present
+            if (!networksContainer.querySelector('.network-card')) {
+                networksContainer.innerHTML = '';
+            }
+
+            const networkIndex = index !== null ? index : networksContainer.children.length;
+
+            const networkCard = document.createElement('div');
+            networkCard.className = 'network-card';
+            networkCard.setAttribute('data-index', networkIndex);
+
+            networkCard.innerHTML = `
+                <div class="network-card-header">
+                    <div class="network-card-title">Network ${networkIndex + 1}</div>
+                    <button type="button" class="btn btn-danger" onclick="removeNetwork(${networkIndex})">Remove</button>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Network IP Address *</label>
+                        <input type="text" class="network-ip" placeholder="192.168.1.0" value="${networkData?.network || ''}">
+                        <div class="help-text">Base network address</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Netmask *</label>
+                        <input type="text" class="netmask" placeholder="255.255.255.0" value="${networkData?.netmask || ''}">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>DHCP Range Start *</label>
+                        <input type="text" class="dhcp-start" placeholder="192.168.1.10" value="${networkData?.dhcp_start || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>DHCP Range End *</label>
+                        <input type="text" class="dhcp-end" placeholder="192.168.1.254" value="${networkData?.dhcp_end || ''}">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Gateway *</label>
+                        <input type="text" class="gateway" placeholder="192.168.1.1" value="${networkData?.gateway || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>DNS Servers *</label>
+                        <input type="text" class="dns" placeholder="8.8.8.8,8.8.4.4" value="${networkData?.dns || ''}">
+                        <div class="help-text">Comma-separated list</div>
+                    </div>
+                </div>
+
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>Default Lease Time (seconds) *</label>
+                        <input type="number" class="lease-time" placeholder="1800" value="${networkData?.dhcp_default_lease_time || '1800'}">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Lease Time (seconds) *</label>
+                        <input type="number" class="max-lease-time" placeholder="3600" value="${networkData?.dhcp_max_lease_time || '3600'}">
+                    </div>
+                    <div class="form-group">
+                        <label>DHCP Status *</label>
+                        <select class="dhcp-enabled">
+                            <option value="enabled" ${networkData?.dhcpd === 'enabled' ? 'selected' : ''}>Enabled</option>
+                            <option value="disabled" ${networkData?.dhcpd === 'disabled' ? 'selected' : ''}>Disabled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Domain Name</label>
+                    <input type="text" class="domain-name" placeholder="example.com" value="${networkData?.domain_name || ''}">
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Reserved IPs (Optional)</label>
+                        <input type="text" class="ip-reserved" placeholder="192.168.1.1-192.168.1.5" value="${networkData?.ip_reserved || ''}">
+                        <div class="help-text">Format: start-end (e.g., 192.168.1.1-192.168.1.5)</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Static IP Assignments (Optional)</label>
+                        <input type="text" class="ip-assigned" placeholder="aa:bb:cc:dd:ee:ff:192.168.1.100" value="${networkData?.ip_assigned || ''}">
+                        <div class="help-text">Format: MAC:IP (comma-separated)</div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Pool Algorithm</label>
+                        <select class="algorithm">
+                            <option value="1" ${networkData?.algorithm === '1' ? 'selected' : ''}>Random</option>
+                            <option value="2" ${networkData?.algorithm === '2' ? 'selected' : ''}>FIFO</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Next Hop (Optional)</label>
+                        <input type="text" class="next-hop" placeholder="192.168.1.1" value="${networkData?.next_hop || ''}">
+                        <div class="help-text">For relay scenarios</div>
+                    </div>
+                </div>
+            `;
+
+            networksContainer.appendChild(networkCard);
+        }
+
+        function removeNetwork(index) {
+            const networkCard = document.querySelector(`.network-card[data-index="${index}"]`);
+            if (networkCard) {
+                networkCard.remove();
+
+                // Check if there are any networks left
+                const networksContainer = document.getElementById('networksContainer');
+                if (!networksContainer.querySelector('.network-card')) {
+                    networksContainer.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">No networks configured. Click "Add Network" to create one.</p>';
+                }
+            }
+        }
+
+        async function saveConfig() {
+            try {
+                // Collect interfaces
+                const interfacesStr = document.getElementById('interfaces').value.trim();
+                const relayStr = document.getElementById('relay').value.trim();
+
+                const interfaces = interfacesStr ? interfacesStr.split(',').map(i => i.trim()) : [];
+                const relay = relayStr ? relayStr.split(',').map(r => r.trim()) : [];
+
+                // Collect networks
+                const networks = [];
+                const networkCards = document.querySelectorAll('.network-card');
+
+                networkCards.forEach(card => {
+                    const network = {
+                        network: card.querySelector('.network-ip').value.trim(),
+                        netmask: card.querySelector('.netmask').value.trim(),
+                        dhcp_start: card.querySelector('.dhcp-start').value.trim(),
+                        dhcp_end: card.querySelector('.dhcp-end').value.trim(),
+                        gateway: card.querySelector('.gateway').value.trim(),
+                        dns: card.querySelector('.dns').value.trim(),
+                        dhcp_default_lease_time: card.querySelector('.lease-time').value.trim(),
+                        dhcp_max_lease_time: card.querySelector('.max-lease-time').value.trim(),
+                        dhcpd: card.querySelector('.dhcp-enabled').value,
+                        domain_name: card.querySelector('.domain-name').value.trim(),
+                        ip_reserved: card.querySelector('.ip-reserved').value.trim(),
+                        ip_assigned: card.querySelector('.ip-assigned').value.trim(),
+                        algorithm: card.querySelector('.algorithm').value,
+                        next_hop: card.querySelector('.next-hop').value.trim()
+                    };
+
+                    // Validate required fields
+                    if (!network.network || !network.netmask || !network.dhcp_start ||
+                        !network.dhcp_end || !network.gateway || !network.dns) {
+                        throw new Error('Please fill in all required fields for all networks');
+                    }
+
+                    networks.push(network);
+                });
+
+                const config = {
+                    interfaces: interfaces,
+                    relay: relay,
+                    networks: networks
+                };
+
+                const response = await fetch('/api/v1/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to save configuration');
+                }
+
+                const result = await response.json();
+                showAlert(result.message || 'Configuration saved successfully!', 'success');
+            } catch (error) {
+                showAlert('Error saving configuration: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

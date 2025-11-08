@@ -113,6 +113,11 @@ func main() {
 	router.HandleFunc("/api/v1/dhcp/stats/{int:.*}/{network:(?:[0-9]{1,3}.){3}(?:[0-9]{1,3})}", handleStats).Methods("GET")
 	router.HandleFunc("/api/v1/dhcp/stats/{int:.*}", handleStats).Methods("GET")
 	router.HandleFunc("/api/v1/dhcp/debug/{int:.*}/{role:(?:[^/]*)}", handleDebug).Methods("GET")
+	router.HandleFunc("/api/v1/config", handleGetConfig).Methods("GET")
+	router.HandleFunc("/api/v1/config", handleUpdateConfig).Methods("POST")
+
+	// Serve static web UI
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir("/usr/local/share/godhcp/webui")))
 
 	srv := &http.Server{
 		Addr:        "127.0.0.1:22227",

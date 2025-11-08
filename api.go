@@ -65,6 +65,31 @@ type Info struct {
 	Network string `json:"network,omitempty"`
 }
 
+// ConfigSection represents a network configuration section
+type ConfigSection struct {
+	Network              string `json:"network"`
+	DNS                  string `json:"dns"`
+	Gateway              string `json:"gateway"`
+	DHCPStart            string `json:"dhcp_start"`
+	DHCPEnd              string `json:"dhcp_end"`
+	Netmask              string `json:"netmask"`
+	DomainName           string `json:"domain_name,omitempty"`
+	DHCPDefaultLeaseTime string `json:"dhcp_default_lease_time"`
+	DHCPMaxLeaseTime     string `json:"dhcp_max_lease_time"`
+	DHCPEnabled          string `json:"dhcpd"`
+	IPReserved           string `json:"ip_reserved,omitempty"`
+	IPAssigned           string `json:"ip_assigned,omitempty"`
+	Algorithm            string `json:"algorithm,omitempty"`
+	NextHop              string `json:"next_hop,omitempty"`
+}
+
+// ConfigResponse represents the full configuration
+type ConfigResponse struct {
+	Interfaces []string        `json:"interfaces"`
+	Relay      []string        `json:"relay,omitempty"`
+	Networks   []ConfigSection `json:"networks"`
+}
+
 func handleIP2Mac(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
@@ -265,4 +290,155 @@ func (h *Interface) handleApiReq(Request ApiReq) interface{} {
 	}
 
 	return nil
+}
+
+// handleGetConfig returns the current DHCP configuration
+func handleGetConfig(res http.ResponseWriter, req *http.Request) {
+	cfg, err := ini.Load("/usr/local/etc/godhcp.ini")
+	if err != nil {
+		unifiedapierrors.Error(res, "Failed to load configuration: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var configResponse ConfigResponse
+
+	// Get interfaces
+	interfacesStr := cfg.Section("interfaces").Key("listen").String()
+	if interfacesStr != "" {
+		configResponse.Interfaces = strings.Split(interfacesStr, ",")
+	}
+
+	// Get relay
+	relayStr := cfg.Section("interfaces").Key("relay").String()
+	if relayStr != "" {
+		configResponse.Relay = strings.Split(relayStr, ",")
+	}
+
+	// Get all network sections
+	sections := cfg.SectionStrings()
+	for _, section := range sections {
+		if strings.HasPrefix(section, "network ") {
+			networkIP := strings.TrimPrefix(section, "network ")
+			sec := cfg.Section(section)
+
+			configSection := ConfigSection{
+				Network:              networkIP,
+				DNS:                  sec.Key("dns").String(),
+				Gateway:              sec.Key("gateway").String(),
+				DHCPStart:            sec.Key("dhcp_start").String(),
+				DHCPEnd:              sec.Key("dhcp_end").String(),
+				Netmask:              sec.Key("netmask").String(),
+				DomainName:           sec.Key("domain-name").String(),
+				DHCPDefaultLeaseTime: sec.Key("dhcp_default_lease_time").String(),
+				DHCPMaxLeaseTime:     sec.Key("dhcp_max_lease_time").String(),
+				DHCPEnabled:          sec.Key("dhcpd").String(),
+				IPReserved:           sec.Key("ip_reserved").String(),
+				IPAssigned:           sec.Key("ip_assigned").String(),
+				Algorithm:            sec.Key("algorithm").String(),
+				NextHop:              sec.Key("next_hop").String(),
+			}
+			configResponse.Networks = append(configResponse.Networks, configSection)
+		}
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(res).Encode(configResponse); err != nil {
+		unifiedapierrors.Error(res, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+// handleUpdateConfig updates the DHCP configuration
+func handleUpdateConfig(res http.ResponseWriter, req *http.Request) {
+	var configRequest ConfigResponse
+
+	if err := json.NewDecoder(req.Body).Decode(&configRequest); err != nil {
+		unifiedapierrors.Error(res, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Create new INI file
+	cfg := ini.Empty()
+
+	// Add interfaces section
+	interfacesSec, err := cfg.NewSection("interfaces")
+	if err != nil {
+		unifiedapierrors.Error(res, "Failed to create interfaces section: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(configRequest.Interfaces) > 0 {
+		interfacesSec.Key("listen").SetValue(strings.Join(configRequest.Interfaces, ","))
+	}
+
+	if len(configRequest.Relay) > 0 {
+		interfacesSec.Key("relay").SetValue(strings.Join(configRequest.Relay, ","))
+	}
+
+	// Add network sections
+	for _, network := range configRequest.Networks {
+		sectionName := "network " + network.Network
+		sec, err := cfg.NewSection(sectionName)
+		if err != nil {
+			unifiedapierrors.Error(res, "Failed to create network section: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if network.DNS != "" {
+			sec.Key("dns").SetValue(network.DNS)
+		}
+		if network.Gateway != "" {
+			sec.Key("gateway").SetValue(network.Gateway)
+		}
+		if network.DHCPStart != "" {
+			sec.Key("dhcp_start").SetValue(network.DHCPStart)
+		}
+		if network.DHCPEnd != "" {
+			sec.Key("dhcp_end").SetValue(network.DHCPEnd)
+		}
+		if network.Netmask != "" {
+			sec.Key("netmask").SetValue(network.Netmask)
+		}
+		if network.DomainName != "" {
+			sec.Key("domain-name").SetValue(network.DomainName)
+		}
+		if network.DHCPDefaultLeaseTime != "" {
+			sec.Key("dhcp_default_lease_time").SetValue(network.DHCPDefaultLeaseTime)
+		}
+		if network.DHCPMaxLeaseTime != "" {
+			sec.Key("dhcp_max_lease_time").SetValue(network.DHCPMaxLeaseTime)
+		}
+		if network.DHCPEnabled != "" {
+			sec.Key("dhcpd").SetValue(network.DHCPEnabled)
+		}
+		if network.IPReserved != "" {
+			sec.Key("ip_reserved").SetValue(network.IPReserved)
+		}
+		if network.IPAssigned != "" {
+			sec.Key("ip_assigned").SetValue(network.IPAssigned)
+		}
+		if network.Algorithm != "" {
+			sec.Key("algorithm").SetValue(network.Algorithm)
+		}
+		if network.NextHop != "" {
+			sec.Key("next_hop").SetValue(network.NextHop)
+		}
+	}
+
+	// Save to file
+	if err := cfg.SaveTo("/usr/local/etc/godhcp.ini"); err != nil {
+		unifiedapierrors.Error(res, "Failed to save configuration: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]string{
+		"status":  "success",
+		"message": "Configuration updated successfully. Restart the service to apply changes.",
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(res).Encode(response); err != nil {
+		unifiedapierrors.Error(res, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
