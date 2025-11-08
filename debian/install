@@ -2,3 +2,4 @@ godhcp usr/local/sbin/
 godhcp.ini usr/local/etc/
 webui/index.html usr/local/share/godhcp/webui/
 webui/options.html usr/local/share/godhcp/webui/
+webui/stats.html usr/local/share/godhcp/webui/
