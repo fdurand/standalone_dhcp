@@ -29,6 +29,7 @@ install: build
 	install -m 0755 $(BINARY_NAME) $(INSTALL_DIR)/$(BINARY_NAME)
 	install -m 0644 godhcp.ini $(CONFIG_DIR)/godhcp.ini
 	install -m 0644 webui/index.html $(WEBUI_DIR)/index.html
+	install -m 0644 webui/options.html $(WEBUI_DIR)/options.html
 	install -m 0644 godhcp.service $(SYSTEMD_DIR)/godhcp.service
 	systemctl daemon-reload
 

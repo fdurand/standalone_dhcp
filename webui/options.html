@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHCP Options Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .nav {
+            background: #f8f9fa;
+            padding: 15px 30px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .nav a {
+            color: #495057;
+            text-decoration: none;
+            margin-right: 20px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav a:hover {
+            background: #e9ecef;
+        }
+
+        .nav a.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .network-selector {
+            margin-bottom: 25px;
+        }
+
+        .network-selector select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .network-selector select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .options-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .options-panel h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .option-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .option-item.base {
+            border-left-color: #6c757d;
+            opacity: 0.8;
+        }
+
+        .option-item.override {
+            border-left-color: #28a745;
+        }
+
+        .option-info {
+            flex: 1;
+        }
+
+        .option-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .option-details {
+            font-size: 13px;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        .option-value {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-base {
+            background: #6c757d;
+            color: white;
+        }
+
+        .badge-override {
+            background: #28a745;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DHCP Options Management</h1>
+            <p>Manage network-level DHCP option overrides</p>
+        </div>
+
+        <div class="nav">
+            <a href="/">Configuration</a>
+            <a href="/options.html" class="active">Options Management</a>
+        </div>
+
+        <div class="content">
+            <div id="alertContainer"></div>
+            <div id="loadingIndicator" class="loading">Loading networks and options...</div>
+
+            <div id="mainContent" style="display: none;">
+                <!-- Network Selector -->
+                <div class="section">
+                    <div class="section-title">Select Network</div>
+                    <div class="network-selector">
+                        <select id="networkSelect" onchange="loadNetworkOptions()">
+                            <option value="">-- Select a network --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Options Display and Management -->
+                <div id="optionsSection" style="display: none;">
+                    <div class="options-grid">
+                        <!-- Base Options Panel -->
+                        <div class="options-panel">
+                            <h3>Base Configuration Options <span class="badge badge-base">From Config</span></h3>
+                            <div id="baseOptionsList"></div>
+                        </div>
+
+                        <!-- Override Options Panel -->
+                        <div class="options-panel">
+                            <h3>Active Overrides <span class="badge badge-override">From Database</span></h3>
+                            <div id="overrideOptionsList"></div>
+                        </div>
+                    </div>
+
+                    <!-- Add Override Section -->
+                    <div class="section" style="margin-top: 25px;">
+                        <div class="section-title">
+                            <span>Add New Option Override</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="optionCode">DHCP Option *</label>
+                            <select id="optionCode" onchange="updateOptionType()">
+                                <option value="">-- Select an option --</option>
+                                <option value="1">1 - Subnet Mask</option>
+                                <option value="3">3 - Router/Gateway</option>
+                                <option value="6">6 - DNS Servers</option>
+                                <option value="15">15 - Domain Name</option>
+                                <option value="28">28 - Broadcast Address</option>
+                                <option value="42">42 - NTP Servers</option>
+                                <option value="51">51 - IP Address Lease Time</option>
+                                <option value="58">58 - Renewal Time (T1)</option>
+                                <option value="59">59 - Rebinding Time (T2)</option>
+                                <option value="66">66 - TFTP Server Name</option>
+                                <option value="67">67 - Bootfile Name</option>
+                                <option value="119">119 - Domain Search List</option>
+                                <option value="custom">Custom Option Code</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="customOptionCodeGroup" style="display: none;">
+                            <label for="customOptionCode">Custom Option Code (1-255)</label>
+                            <input type="number" id="customOptionCode" min="1" max="255" placeholder="Enter option code">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="optionType">Value Type *</label>
+                            <select id="optionType">
+                                <option value="ip">Single IP Address</option>
+                                <option value="ips">Multiple IP Addresses (comma-separated)</option>
+                                <option value="string">String/Text</option>
+                                <option value="uint32">32-bit Integer</option>
+                                <option value="uint16">16-bit Integer</option>
+                                <option value="uint8">8-bit Integer</option>
+                            </select>
+                            <div class="help-text" id="typeHelp"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="optionValue">Value *</label>
+                            <input type="text" id="optionValue" placeholder="Enter option value">
+                            <div class="help-text" id="valueHelp"></div>
+                        </div>
+
+                        <button class="btn btn-success" onclick="addOptionOverride()">Add Override</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let networks = [];
+        let currentNetwork = null;
+        let baseOptions = {};
+        let overrideOptions = [];
+
+        // Common DHCP option metadata
+        const optionMetadata = {
+            1: { name: 'Subnet Mask', type: 'ip', example: '255.255.255.0' },
+            3: { name: 'Router/Gateway', type: 'ip', example: '192.168.1.1' },
+            6: { name: 'DNS Servers', type: 'ips', example: '8.8.8.8,8.8.4.4' },
+            15: { name: 'Domain Name', type: 'string', example: 'example.com' },
+            28: { name: 'Broadcast Address', type: 'ip', example: '192.168.1.255' },
+            42: { name: 'NTP Servers', type: 'ips', example: '129.6.15.28,132.163.96.1' },
+            51: { name: 'IP Address Lease Time', type: 'uint32', example: '3600' },
+            58: { name: 'Renewal Time (T1)', type: 'uint32', example: '1800' },
+            59: { name: 'Rebinding Time (T2)', type: 'uint32', example: '3150' },
+            66: { name: 'TFTP Server Name', type: 'string', example: 'tftp.example.com' },
+            67: { name: 'Bootfile Name', type: 'string', example: 'pxelinux.0' },
+            119: { name: 'Domain Search List', type: 'string', example: 'example.com,example.org' }
+        };
+
+        // Load page on startup
+        window.addEventListener('DOMContentLoaded', function() {
+            loadNetworks();
+        });
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} show`;
+            alert.textContent = message;
+            alertContainer.appendChild(alert);
+
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        }
+
+        async function loadNetworks() {
+            try {
+                document.getElementById('loadingIndicator').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'none';
+
+                const response = await fetch('/api/v1/config');
+                if (!response.ok) {
+                    throw new Error('Failed to load configuration');
+                }
+
+                const config = await response.json();
+                networks = config.networks || [];
+
+                const networkSelect = document.getElementById('networkSelect');
+                networkSelect.innerHTML = '<option value="">-- Select a network --</option>';
+
+                networks.forEach((network, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${network.network} (${network.netmask}) - ${network.dhcpd}`;
+                    networkSelect.appendChild(option);
+                });
+
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+
+                if (networks.length === 0) {
+                    showAlert('No networks configured. Please add networks in the configuration page first.', 'info');
+                }
+            } catch (error) {
+                document.getElementById('loadingIndicator').textContent = 'Error loading networks: ' + error.message;
+                showAlert('Error loading networks: ' + error.message, 'error');
+            }
+        }
+
+        async function loadNetworkOptions() {
+            const networkSelect = document.getElementById('networkSelect');
+            const selectedIndex = networkSelect.value;
+
+            if (selectedIndex === '') {
+                document.getElementById('optionsSection').style.display = 'none';
+                return;
+            }
+
+            currentNetwork = networks[selectedIndex];
+            document.getElementById('optionsSection').style.display = 'block';
+
+            // Display base options from config
+            displayBaseOptions();
+
+            // Load overrides from database
+            await loadOverrideOptions();
+        }
+
+        function displayBaseOptions() {
+            const baseOptionsList = document.getElementById('baseOptionsList');
+            baseOptionsList.innerHTML = '';
+
+            baseOptions = {};
+
+            // Parse base options from network config
+            const options = [
+                { code: 1, value: currentNetwork.netmask, name: 'Subnet Mask' },
+                { code: 3, value: currentNetwork.gateway, name: 'Router/Gateway' },
+                { code: 6, value: currentNetwork.dns, name: 'DNS Servers' },
+                { code: 15, value: currentNetwork.domain_name, name: 'Domain Name' },
+                { code: 51, value: currentNetwork.dhcp_default_lease_time, name: 'Lease Time' }
+            ];
+
+            let hasOptions = false;
+
+            options.forEach(opt => {
+                if (opt.value && opt.value !== '') {
+                    hasOptions = true;
+                    baseOptions[opt.code] = opt.value;
+
+                    const item = document.createElement('div');
+                    item.className = 'option-item base';
+                    item.innerHTML = `
+                        <div class="option-info">
+                            <div class="option-name">${opt.name} (Code ${opt.code})</div>
+                            <div class="option-value">${opt.value}</div>
+                            <div class="option-details">Defined in configuration file</div>
+                        </div>
+                    `;
+                    baseOptionsList.appendChild(item);
+                }
+            });
+
+            if (!hasOptions) {
+                baseOptionsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No base options configured</p></div>';
+            }
+        }
+
+        async function loadOverrideOptions() {
+            const overrideOptionsList = document.getElementById('overrideOptionsList');
+            overrideOptionsList.innerHTML = '<div class="loading">Loading overrides...</div>';
+
+            try {
+                const response = await fetch(`/api/v1/dhcp/options/network/${currentNetwork.network}`);
+
+                if (response.status === 404) {
+                    // No overrides found
+                    overrideOptions = [];
+                    overrideOptionsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✨</div><p>No active overrides</p></div>';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to load option overrides');
+                }
+
+                const data = await response.json();
+                overrideOptions = data.options || [];
+
+                if (overrideOptions.length === 0) {
+                    overrideOptionsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✨</div><p>No active overrides</p></div>';
+                    return;
+                }
+
+                overrideOptionsList.innerHTML = '';
+                overrideOptions.forEach(opt => {
+                    const metadata = optionMetadata[opt.option_code] || { name: `Option ${opt.option_code}` };
+
+                    const item = document.createElement('div');
+                    item.className = 'option-item override';
+                    item.innerHTML = `
+                        <div class="option-info">
+                            <div class="option-name">${metadata.name} (Code ${opt.option_code})</div>
+                            <div class="option-value">${opt.option_value}</div>
+                            <div class="option-details">Type: ${opt.option_type}</div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="deleteOptionOverride(${opt.option_code})">Delete</button>
+                    `;
+                    overrideOptionsList.appendChild(item);
+                });
+
+            } catch (error) {
+                overrideOptionsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">❌</div><p>Error loading overrides</p></div>';
+                showAlert('Error loading option overrides: ' + error.message, 'error');
+            }
+        }
+
+        function updateOptionType() {
+            const optionCode = document.getElementById('optionCode').value;
+            const customGroup = document.getElementById('customOptionCodeGroup');
+            const optionType = document.getElementById('optionType');
+
+            if (optionCode === 'custom') {
+                customGroup.style.display = 'block';
+                updateHelpText();
+                return;
+            } else {
+                customGroup.style.display = 'none';
+            }
+
+            if (optionCode && optionMetadata[optionCode]) {
+                const metadata = optionMetadata[optionCode];
+                optionType.value = metadata.type;
+                updateHelpText();
+            }
+        }
+
+        function updateHelpText() {
+            const optionCode = document.getElementById('optionCode').value;
+            const optionType = document.getElementById('optionType').value;
+            const typeHelp = document.getElementById('typeHelp');
+            const valueHelp = document.getElementById('valueHelp');
+
+            // Type help
+            const typeHelpText = {
+                'ip': 'Single IPv4 address',
+                'ips': 'Comma-separated list of IPv4 addresses',
+                'string': 'Text string',
+                'uint32': '32-bit unsigned integer (0 to 4,294,967,295)',
+                'uint16': '16-bit unsigned integer (0 to 65,535)',
+                'uint8': '8-bit unsigned integer (0 to 255)'
+            };
+            typeHelp.textContent = typeHelpText[optionType] || '';
+
+            // Value help with example
+            if (optionCode && optionCode !== 'custom' && optionMetadata[optionCode]) {
+                valueHelp.textContent = `Example: ${optionMetadata[optionCode].example}`;
+            } else {
+                const exampleText = {
+                    'ip': 'Example: 192.168.1.1',
+                    'ips': 'Example: 8.8.8.8,8.8.4.4',
+                    'string': 'Example: example.com',
+                    'uint32': 'Example: 3600',
+                    'uint16': 'Example: 68',
+                    'uint8': 'Example: 1'
+                };
+                valueHelp.textContent = exampleText[optionType] || '';
+            }
+        }
+
+        // Listen for option type changes
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('optionType').addEventListener('change', updateHelpText);
+        });
+
+        async function addOptionOverride() {
+            const networkSelect = document.getElementById('networkSelect');
+            if (!currentNetwork) {
+                showAlert('Please select a network first', 'error');
+                return;
+            }
+
+            let optionCode = document.getElementById('optionCode').value;
+            if (optionCode === 'custom') {
+                optionCode = document.getElementById('customOptionCode').value;
+                if (!optionCode || optionCode < 1 || optionCode > 255) {
+                    showAlert('Please enter a valid custom option code (1-255)', 'error');
+                    return;
+                }
+            }
+
+            const optionType = document.getElementById('optionType').value;
+            const optionValue = document.getElementById('optionValue').value.trim();
+
+            if (!optionCode || !optionValue) {
+                showAlert('Please fill in all required fields', 'error');
+                return;
+            }
+
+            try {
+                const payload = [{
+                    option_code: parseInt(optionCode),
+                    option_value: optionValue,
+                    option_type: optionType
+                }];
+
+                // Merge with existing overrides
+                const existingOverrides = overrideOptions.filter(opt => opt.option_code !== parseInt(optionCode));
+                const allOverrides = [...existingOverrides, ...payload];
+
+                const response = await fetch(`/api/v1/dhcp/options/network/${currentNetwork.network}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(allOverrides)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to add option override');
+                }
+
+                showAlert('Option override added successfully!', 'success');
+
+                // Clear form
+                document.getElementById('optionCode').value = '';
+                document.getElementById('optionValue').value = '';
+                document.getElementById('customOptionCode').value = '';
+                document.getElementById('customOptionCodeGroup').style.display = 'none';
+
+                // Reload overrides
+                await loadOverrideOptions();
+
+            } catch (error) {
+                showAlert('Error adding option override: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteOptionOverride(optionCode) {
+            if (!confirm(`Are you sure you want to delete the override for option ${optionCode}?`)) {
+                return;
+            }
+
+            try {
+                // Remove the option from the array and update
+                const updatedOverrides = overrideOptions.filter(opt => opt.option_code !== optionCode);
+
+                if (updatedOverrides.length === 0) {
+                    // Delete all overrides
+                    const response = await fetch(`/api/v1/dhcp/options/network/${currentNetwork.network}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to delete option override');
+                    }
+                } else {
+                    // Update with remaining overrides
+                    const response = await fetch(`/api/v1/dhcp/options/network/${currentNetwork.network}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updatedOverrides)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to update option overrides');
+                    }
+                }
+
+                showAlert('Option override deleted successfully!', 'success');
+                await loadOverrideOptions();
+
+            } catch (error) {
+                showAlert('Error deleting option override: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

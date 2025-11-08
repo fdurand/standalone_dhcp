@@ -45,6 +45,30 @@
             opacity: 0.9;
         }
 
+        .nav {
+            background: #f8f9fa;
+            padding: 15px 30px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .nav a {
+            color: #495057;
+            text-decoration: none;
+            margin-right: 20px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav a:hover {
+            background: #e9ecef;
+        }
+
+        .nav a.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
         .content {
             padding: 30px;
         }
@@ -236,6 +260,11 @@
         <div class="header">
             <h1>DHCP Server Configuration</h1>
             <p>Configure your standalone DHCP server settings</p>
+        </div>
+
+        <div class="nav">
+            <a href="/" class="active">Configuration</a>
+            <a href="/options.html">Options Management</a>
         </div>
 
         <div class="content">

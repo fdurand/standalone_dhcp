@@ -16,6 +16,7 @@ override_dh_auto_install:
 	install -D -m 0644 godhcp.service debian/godhcp/lib/systemd/system/godhcp.service
 	install -d debian/godhcp/usr/local/share/godhcp/webui
 	install -m 0644 webui/index.html debian/godhcp/usr/local/share/godhcp/webui/
+	install -m 0644 webui/options.html debian/godhcp/usr/local/share/godhcp/webui/
 
 override_dh_auto_test:
 	# Skip tests for now
