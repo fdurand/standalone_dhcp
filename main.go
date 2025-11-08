@@ -56,7 +56,7 @@ func main() {
 	// Initialize transaction cache
 	GlobalTransactionCache = cache.New(5*time.Minute, 10*time.Minute)
 	GlobalTransactionLock = timedlock.NewRWLock()
-	RequestGlobalTransactionCache = cache.New(5*time.Minute, 10*time.Minute)
+	RequestGlobalTransactionCache = cache.New(1*time.Second, 2*time.Second)
 
 	VIP = make(map[string]bool)
 	VIPIp = make(map[string]net.IP)
@@ -142,14 +142,14 @@ func main() {
 				log.LoggerWContext(ctx).Error(err.Error())
 				continue
 			}
-			defer resp.Body.Close()
-			if err == nil {
-				daemon.SdNotify(false, "WATCHDOG=1")
-			}
+			resp.Body.Close()
+			daemon.SdNotify(false, "WATCHDOG=1")
 			time.Sleep(interval / 3)
 		}
 	}()
-	srv.ListenAndServe()
+	if err := srv.ListenAndServe(); err != nil {
+		log.LoggerWContext(ctx).Error("HTTP server error: " + err.Error())
+	}
 }
 
 func recoverName(options dhcp.Options) {

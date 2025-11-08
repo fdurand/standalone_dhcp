@@ -125,11 +125,13 @@ func (dp *DHCPPool) GetFreeIPIndex(mac string) (uint64, string, error) {
 
 		var ss []kv
 		for k, v := range dp.released {
-			ss = append(ss, kv{k, v})
+			if _, free := dp.free[k]; free {
+				ss = append(ss, kv{k, v})
+			}
 		}
 
 		sort.Slice(ss, func(i, j int) bool {
-			return ss[i].Value > ss[j].Value
+			return ss[i].Value < ss[j].Value
 		})
 
 		for _, kv := range ss {

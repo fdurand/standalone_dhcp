@@ -75,7 +75,11 @@ func (d *Interfaces) readConfig() {
 	NetInterfaces := strings.Split(Interfaces, ",")
 
 	networks := cfg.SectionStrings()
-	networkKey, _ := regexp.Compile("^network (?P<Net>.*)$")
+	networkKey, err := regexp.Compile("^network (?P<Net>.*)$")
+	if err != nil {
+		fmt.Printf("Fail to compile regex: %v", err)
+		os.Exit(1)
+	}
 
 	for _, v := range NetInterfaces {
 		eth, err := net.InterfaceByName(v)
@@ -118,6 +122,10 @@ func (d *Interfaces) readConfig() {
 				if networkKey.MatchString(key) {
 					sec := cfg.Section(key)
 					netWork := networkKey.FindStringSubmatch(key)
+					if len(netWork) < 2 {
+						log.LoggerWContext(ctx).Error("Invalid network section format: " + key)
+						continue
+					}
 					if sec.Key("dhcpd").String() == "disabled" {
 						continue
 					}
@@ -178,6 +186,8 @@ func (d *Interfaces) readConfig() {
 					}
 				}
 			}
+		}
+		if len(ethIf.network) > 0 {
 			d.intsNet = append(d.intsNet, ethIf)
 		}
 	}
@@ -192,7 +202,15 @@ func (d *Interfaces) readConfig() {
 		ethIf.InterfaceType = "relay"
 
 		interfaceConfig := strings.Split(result[i], ":")
-		iface, _ := net.InterfaceByName(interfaceConfig[0])
+		if len(interfaceConfig) < 2 {
+			log.LoggerWContext(ctx).Error("Invalid relay interface config format: " + result[i])
+			continue
+		}
+		iface, err := net.InterfaceByName(interfaceConfig[0])
+		if err != nil {
+			log.LoggerWContext(ctx).Error("Cannot find relay interface " + interfaceConfig[0] + " on the system: " + err.Error())
+			continue
+		}
 		ethIf.intNet = iface
 		ethIf.Name = iface.Name
 		ethIf.listenPort = bootp_client
@@ -219,11 +237,19 @@ func AssignIP(dhcpHandler *DHCPHandler, ipRange string) (map[string]uint32, []ne
 	couple := make(map[string]uint32)
 	var iplist []net.IP
 	if ipRange != "" {
-		rgx, _ := regexp.Compile("((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}):((?:[0-9]{1,3}.){3}(?:[0-9]{1,3}))")
+		rgx, err := regexp.Compile("((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}):((?:[0-9]{1,3}.){3}(?:[0-9]{1,3}))")
+		if err != nil {
+			log.LoggerWContext(ctx).Error("Failed to compile regex for IP assignment: " + err.Error())
+			return couple, iplist
+		}
 		ipRangeArray := strings.Split(ipRange, ",")
 		if len(ipRangeArray) >= 1 {
 			for _, rangeip := range ipRangeArray {
 				result := rgx.FindStringSubmatch(rangeip)
+				if len(result) < 3 {
+					log.LoggerWContext(ctx).Error("Invalid IP assignment format: " + rangeip)
+					continue
+				}
 				position := uint32(binary.BigEndian.Uint32(net.ParseIP(result[2]).To4())) - uint32(binary.BigEndian.Uint32(dhcpHandler.start.To4()))
 				// Remove the position in the roaming bitmap
 				dhcpHandler.available.ReserveIPIndex(uint64(position), result[1])
