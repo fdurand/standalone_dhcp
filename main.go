@@ -7,6 +7,7 @@ import (
 	_ "expvar"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/coreos/go-systemd/daemon"
@@ -47,6 +48,13 @@ func main() {
 	arp.AutoRefresh(30 * time.Second)
 	// Default http timeout
 	http.DefaultClient.Timeout = 10 * time.Second
+
+	// Initialize SQLite database for option overrides
+	if err := InitDatabase("/usr/local/etc/godhcp.db"); err != nil {
+		log.LoggerWContext(ctx).Error("Failed to initialize database: " + err.Error())
+		os.Exit(1)
+	}
+	defer CloseDatabase()
 
 	// Initialize IP cache
 	GlobalIpCache = cache.New(5*time.Minute, 10*time.Minute)
@@ -115,6 +123,14 @@ func main() {
 	router.HandleFunc("/api/v1/dhcp/debug/{int:.*}/{role:(?:[^/]*)}", handleDebug).Methods("GET")
 	router.HandleFunc("/api/v1/config", handleGetConfig).Methods("GET")
 	router.HandleFunc("/api/v1/config", handleUpdateConfig).Methods("POST")
+
+	// DHCP option override endpoints
+	router.HandleFunc("/api/v1/dhcp/options/network/{network:(?:[0-9]{1,3}.){3}(?:[0-9]{1,3})}", handleOverrideNetworkOptions).Methods("POST")
+	router.HandleFunc("/api/v1/dhcp/options/network/{network:(?:[0-9]{1,3}.){3}(?:[0-9]{1,3})}", handleRemoveNetworkOptions).Methods("DELETE")
+	router.HandleFunc("/api/v1/dhcp/options/mac/{mac:(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}}", handleOverrideOptions).Methods("POST")
+	router.HandleFunc("/api/v1/dhcp/options/mac/{mac:(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}}", handleRemoveOptions).Methods("DELETE")
+	router.HandleFunc("/api/v1/dhcp/options", handleListOptionOverrides).Methods("GET")
+	router.HandleFunc("/api/v1/dhcp/options/{type}/{target}", handleGetOptionOverride).Methods("GET")
 
 	// Serve static web UI
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("/usr/local/share/godhcp/webui")))

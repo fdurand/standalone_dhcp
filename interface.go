@@ -37,6 +37,7 @@ func (I *Interface) isRelay() bool {
 func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.MessageType, srcIP net.Addr, srvIP net.IP) (answer Answer) {
 
 	var handler DHCPHandler
+	var networkIP string
 
 	Local := false
 	options := p.ParseOptions()
@@ -174,17 +175,20 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 				continue
 			}
 			handler = *v.dhcpHandler
+			networkIP = v.network.IP.String()
 			break
 
 		}
 		// Case dhcprequest from an already assigned l3 ip address
 		if p.GIAddr().Equal(net.IPv4zero) && v.network.Contains(p.CIAddr()) {
 			handler = *v.dhcpHandler
+			networkIP = v.network.IP.String()
 			break
 		}
 
 		if (!p.GIAddr().Equal(net.IPv4zero) && v.network.Contains(p.GIAddr())) || v.network.Contains(p.CIAddr()) {
 			handler = *v.dhcpHandler
+			networkIP = v.network.IP.String()
 			break
 		}
 	}
@@ -357,6 +361,8 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			}
 		}
 		GlobalOptions = options
+		// Apply option overrides
+		GlobalOptions = ApplyOptionOverrides(GlobalOptions, networkIP, clientMac)
 		leaseDuration := handler.leaseDuration
 
 		log.LoggerWContext(ctx).Info("DHCPOFFER on " + answer.IP.String() + " to " + clientMac + " (" + clientHostname + ")")

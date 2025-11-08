@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -441,4 +442,195 @@ func handleUpdateConfig(res http.ResponseWriter, req *http.Request) {
 		unifiedapierrors.Error(res, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// handleOverrideNetworkOptions handles POST /api/v1/dhcp/options/network/{network}
+func handleOverrideNetworkOptions(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	network := vars["network"]
+
+	var options []DHCPOption
+	if err := json.NewDecoder(req.Body).Decode(&options); err != nil {
+		unifiedapierrors.Error(res, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate options
+	for _, opt := range options {
+		if opt.OptionCode < 0 || opt.OptionCode > 255 {
+			unifiedapierrors.Error(res, fmt.Sprintf("Invalid option code: %d", opt.OptionCode), http.StatusBadRequest)
+			return
+		}
+		if opt.OptionValue == "" {
+			unifiedapierrors.Error(res, fmt.Sprintf("Empty value for option %d", opt.OptionCode), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Save to database
+	if err := SaveOptionOverride("network", network, options); err != nil {
+		unifiedapierrors.Error(res, "Failed to save option override: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":  "success",
+		"message": fmt.Sprintf("Option overrides saved for network %s", network),
+		"network": network,
+		"options": options,
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response)
+}
+
+// handleRemoveNetworkOptions handles DELETE /api/v1/dhcp/options/network/{network}
+func handleRemoveNetworkOptions(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	network := vars["network"]
+
+	if err := DeleteOptionOverride("network", network); err != nil {
+		if err == sql.ErrNoRows {
+			unifiedapierrors.Error(res, fmt.Sprintf("No option overrides found for network %s", network), http.StatusNotFound)
+			return
+		}
+		unifiedapierrors.Error(res, "Failed to delete option override: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":  "success",
+		"message": fmt.Sprintf("Option overrides removed for network %s", network),
+		"network": network,
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response)
+}
+
+// handleOverrideOptions handles POST /api/v1/dhcp/options/mac/{mac}
+func handleOverrideOptions(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	mac := vars["mac"]
+
+	var options []DHCPOption
+	if err := json.NewDecoder(req.Body).Decode(&options); err != nil {
+		unifiedapierrors.Error(res, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate options
+	for _, opt := range options {
+		if opt.OptionCode < 0 || opt.OptionCode > 255 {
+			unifiedapierrors.Error(res, fmt.Sprintf("Invalid option code: %d", opt.OptionCode), http.StatusBadRequest)
+			return
+		}
+		if opt.OptionValue == "" {
+			unifiedapierrors.Error(res, fmt.Sprintf("Empty value for option %d", opt.OptionCode), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Normalize MAC address
+	mac = strings.ToLower(mac)
+
+	// Save to database
+	if err := SaveOptionOverride("mac", mac, options); err != nil {
+		unifiedapierrors.Error(res, "Failed to save option override: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":  "success",
+		"message": fmt.Sprintf("Option overrides saved for MAC %s", mac),
+		"mac":     mac,
+		"options": options,
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response)
+}
+
+// handleRemoveOptions handles DELETE /api/v1/dhcp/options/mac/{mac}
+func handleRemoveOptions(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	mac := vars["mac"]
+
+	// Normalize MAC address
+	mac = strings.ToLower(mac)
+
+	if err := DeleteOptionOverride("mac", mac); err != nil {
+		if err == sql.ErrNoRows {
+			unifiedapierrors.Error(res, fmt.Sprintf("No option overrides found for MAC %s", mac), http.StatusNotFound)
+			return
+		}
+		unifiedapierrors.Error(res, "Failed to delete option override: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":  "success",
+		"message": fmt.Sprintf("Option overrides removed for MAC %s", mac),
+		"mac":     mac,
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response)
+}
+
+// handleListOptionOverrides handles GET /api/v1/dhcp/options
+func handleListOptionOverrides(res http.ResponseWriter, req *http.Request) {
+	// Get query parameter for filtering by type
+	overrideType := req.URL.Query().Get("type")
+	if overrideType != "" && overrideType != "network" && overrideType != "mac" {
+		unifiedapierrors.Error(res, "Invalid type parameter. Must be 'network' or 'mac'", http.StatusBadRequest)
+		return
+	}
+
+	overrides, err := ListOptionOverrides(overrideType)
+	if err != nil {
+		unifiedapierrors.Error(res, "Failed to list option overrides: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":    "success",
+		"count":     len(overrides),
+		"overrides": overrides,
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(response)
+}
+
+// handleGetOptionOverride handles GET /api/v1/dhcp/options/{type}/{target}
+func handleGetOptionOverride(res http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	overrideType := vars["type"]
+	target := vars["target"]
+
+	if overrideType != "network" && overrideType != "mac" {
+		unifiedapierrors.Error(res, "Invalid type. Must be 'network' or 'mac'", http.StatusBadRequest)
+		return
+	}
+
+	override, err := GetOptionOverride(overrideType, target)
+	if err != nil {
+		unifiedapierrors.Error(res, "Failed to get option override: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if override == nil {
+		unifiedapierrors.Error(res, fmt.Sprintf("No option override found for %s %s", overrideType, target), http.StatusNotFound)
+		return
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(override)
 }
