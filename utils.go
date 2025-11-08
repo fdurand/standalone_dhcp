@@ -87,9 +87,9 @@ func ShuffleNetIP(array []net.IP, randSrc int64) (r []byte) {
 func ShuffleIP(a []byte, randSrc int64) (r []byte) {
 
 	var array []net.IP
-	for len(a) != 0 {
+	for len(a) >= 4 {
 		array = append(array, net.IPv4(a[0], a[1], a[2], a[3]).To4())
-		_, a = a[0], a[4:]
+		a = a[4:]
 	}
 	return ShuffleNetIP(array, randSrc)
 }

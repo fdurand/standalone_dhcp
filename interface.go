@@ -237,7 +237,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 				handler.hwcache.Delete(p.CHAddr().String())
 				// Reserve the ip
 				err, returnedMac = handler.available.ReserveIPIndex(uint64(x.(int)), p.CHAddr().String())
-				if err != nil && returnedMac == p.CHAddr().String() {
+				if err == nil && returnedMac == p.CHAddr().String() {
 					free = x.(int)
 				} else {
 					// Something went wrong to reserve the ip retry
@@ -480,7 +480,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 		if leaseNum := dhcp.IPRange(handler.start, reqIP) - 1; leaseNum >= 0 && leaseNum < handler.leaseRange {
 			if x, found := handler.hwcache.Get(p.CHAddr().String()); found {
 				if leaseNum == x.(int) {
-					log.LoggerWContext(ctx).Debug(prettyType + "Found the ip " + reqIP.String() + "in the cache")
+					log.LoggerWContext(ctx).Debug(prettyType + " Found the ip " + reqIP.String() + " in the cache")
 					_, returnedMac, _ := handler.available.GetMACIndex(uint64(x.(int)))
 					if returnedMac == p.CHAddr().String() {
 						log.LoggerWContext(ctx).Info("Temporarily declaring " + reqIP.String() + " as unusable")
@@ -512,7 +512,7 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			// Remove the mac from the cache
 			if x, found := handler.hwcache.Get(p.CHAddr().String()); found {
 				if leaseNum == x.(int) {
-					log.LoggerWContext(ctx).Debug(prettyType + "Found the ip " + reqIP.String() + "in the cache")
+					log.LoggerWContext(ctx).Debug(prettyType + " Found the ip " + reqIP.String() + " in the cache")
 					_, returnedMac, _ := handler.available.GetMACIndex(uint64(x.(int)))
 					if returnedMac == p.CHAddr().String() {
 						log.LoggerWContext(ctx).Info("Temporarily declaring " + reqIP.String() + " as unusable")

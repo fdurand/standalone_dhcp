@@ -191,7 +191,8 @@ func handleReleaseIP(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(result); err != nil {
-		panic(err)
+		unifiedapierrors.Error(res, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -211,9 +212,12 @@ func (h *Interface) handleApiReq(Request ApiReq) interface{} {
 			Options = make(map[string]string)
 			Options["optionIPAddressLeaseTime"] = v.dhcpHandler.leaseDuration.String()
 			for option, value := range v.dhcpHandler.options {
-				key := []byte(option.String())
-				key[0] = key[0] | ('a' - 'A')
-				Options[string(key)] = Tlv.Tlvlist[int(option)].Decode.String(value)
+				optionStr := option.String()
+				// Convert first character to lowercase if it's uppercase
+				if len(optionStr) > 0 && optionStr[0] >= 'A' && optionStr[0] <= 'Z' {
+					optionStr = strings.ToLower(optionStr[:1]) + optionStr[1:]
+				}
+				Options[optionStr] = Tlv.Tlvlist[int(option)].Decode.String(value)
 			}
 
 			var Members []Node
