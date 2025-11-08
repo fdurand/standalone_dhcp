@@ -149,7 +149,7 @@ func (d *Interfaces) readConfig() {
 						DHCPScope.leaseRange = dhcp.IPRange(net.ParseIP(sec.Key("dhcp_start").String()), net.ParseIP(sec.Key("dhcp_end").String()))
 						algorithm, _ := strconv.Atoi(sec.Key("algorithm").String())
 						// Initialize dhcp pool
-						available := pool.NewDHCPPool(uint64(dhcp.IPRange(net.ParseIP(sec.Key("dhcp_start").String()), net.ParseIP(sec.Key("dhcp_end").String()))), algorithm)
+						available := pool.NewDHCPPool(safeIntToUint64(dhcp.IPRange(net.ParseIP(sec.Key("dhcp_start").String()), net.ParseIP(sec.Key("dhcp_end").String()))), algorithm)
 						DHCPScope.available = available
 
 						// Initialize hardware cache
@@ -160,7 +160,7 @@ func (d *Interfaces) readConfig() {
 								// Always wait 30 seconds before releasing the IP again
 								time.Sleep(30 * time.Second)
 								log.LoggerWContext(ctx).Info(nic + " " + dhcp.IPAdd(DHCPScope.start, pool.(int)).String() + " Added back in the pool " + DHCPScope.role + " on index " + strconv.Itoa(pool.(int)))
-								DHCPScope.available.FreeIPIndex(uint64(pool.(int)))
+								DHCPScope.available.FreeIPIndex(safeIntToUint64(pool.(int)))
 							}()
 						})
 
@@ -252,7 +252,7 @@ func AssignIP(dhcpHandler *DHCPHandler, ipRange string) (map[string]uint32, []ne
 				}
 				position := uint32(binary.BigEndian.Uint32(net.ParseIP(result[2]).To4())) - uint32(binary.BigEndian.Uint32(dhcpHandler.start.To4()))
 				// Remove the position in the roaming bitmap
-				dhcpHandler.available.ReserveIPIndex(uint64(position), result[1])
+				dhcpHandler.available.ReserveIPIndex(safeUint32ToUint64(position), result[1])
 				couple[result[1]] = position
 				iplist = append(iplist, net.ParseIP(result[2]))
 			}

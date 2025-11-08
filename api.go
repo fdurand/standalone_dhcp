@@ -16,6 +16,7 @@ import (
 	"github.com/go-ini/ini"
 	"github.com/gorilla/mux"
 	"github.com/inverse-inc/packetfence/go/api-frontend/unifiedapierrors"
+	"github.com/inverse-inc/packetfence/go/log"
 	dhcp "github.com/krolaw/dhcp4"
 )
 
@@ -64,6 +65,13 @@ type Info struct {
 	Status  string `json:"status"`
 	Mac     string `json:"mac,omitempty"`
 	Network string `json:"network,omitempty"`
+}
+
+// encodeJSON encodes data to JSON response with error handling
+func encodeJSON(res http.ResponseWriter, data interface{}) {
+	if err := json.NewEncoder(res).Encode(data); err != nil {
+		log.LoggerWContext(ctx).Error("Failed to encode JSON response: " + err.Error())
+	}
 }
 
 // ConfigSection represents a network configuration section
@@ -216,10 +224,7 @@ func handleReleaseIP(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	res.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(res).Encode(result); err != nil {
-		unifiedapierrors.Error(res, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	encodeJSON(res, result)
 }
 
 func (h *Interface) handleApiReq(Request ApiReq) interface{} {
@@ -264,7 +269,7 @@ func (h *Interface) handleApiReq(Request ApiReq) interface{} {
 				Count = Count + reserved
 			}
 
-			availableCount := int(v.dhcpHandler.available.FreeIPsRemaining())
+			availableCount := safeUint64ToInt(v.dhcpHandler.available.FreeIPsRemaining())
 			usedCount := (v.dhcpHandler.leaseRange - availableCount)
 			percentfree := int((float64(availableCount) / float64(v.dhcpHandler.leaseRange)) * 100)
 			percentused := int((float64(usedCount) / float64(v.dhcpHandler.leaseRange)) * 100)
@@ -284,7 +289,7 @@ func (h *Interface) handleApiReq(Request ApiReq) interface{} {
 		for _, v := range h.network {
 			if Request.Role == v.dhcpHandler.role {
 				spew.Dump(v.dhcpHandler.hwcache)
-				stats = append(stats, Stats{EthernetName: Request.NetInterface, Net: v.network.String(), Free: int(v.dhcpHandler.available.FreeIPsRemaining()), Category: v.dhcpHandler.role, Status: "Debug finished"})
+				stats = append(stats, Stats{EthernetName: Request.NetInterface, Net: v.network.String(), Free: safeUint64ToInt(v.dhcpHandler.available.FreeIPsRemaining()), Category: v.dhcpHandler.role, Status: "Debug finished"})
 			}
 		}
 		return stats
@@ -343,10 +348,7 @@ func handleGetConfig(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(res).Encode(configResponse); err != nil {
-		unifiedapierrors.Error(res, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	encodeJSON(res, configResponse)
 }
 
 // handleUpdateConfig updates the DHCP configuration
@@ -438,10 +440,7 @@ func handleUpdateConfig(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(res).Encode(response); err != nil {
-		unifiedapierrors.Error(res, "Failed to encode response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	encodeJSON(res, response)
 }
 
 // handleOverrideNetworkOptions handles POST /api/v1/dhcp/options/network/{network}
@@ -482,7 +481,7 @@ func handleOverrideNetworkOptions(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(response)
+	encodeJSON(res, response)
 }
 
 // handleRemoveNetworkOptions handles DELETE /api/v1/dhcp/options/network/{network}
@@ -507,7 +506,7 @@ func handleRemoveNetworkOptions(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(response)
+	encodeJSON(res, response)
 }
 
 // handleOverrideOptions handles POST /api/v1/dhcp/options/mac/{mac}
@@ -551,7 +550,7 @@ func handleOverrideOptions(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(response)
+	encodeJSON(res, response)
 }
 
 // handleRemoveOptions handles DELETE /api/v1/dhcp/options/mac/{mac}
@@ -579,7 +578,7 @@ func handleRemoveOptions(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(response)
+	encodeJSON(res, response)
 }
 
 // handleListOptionOverrides handles GET /api/v1/dhcp/options
@@ -605,7 +604,7 @@ func handleListOptionOverrides(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(response)
+	encodeJSON(res, response)
 }
 
 // handleGetOptionOverride handles GET /api/v1/dhcp/options/{type}/{target}
@@ -632,5 +631,5 @@ func handleGetOptionOverride(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(override)
+	encodeJSON(res, override)
 }

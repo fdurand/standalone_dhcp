@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"math"
 	"math/rand"
 	"net"
 	"strings"
@@ -146,4 +147,25 @@ func setOptionServerIdentifier(srvIP net.IP, handlerIP net.IP) net.IP {
 		return handlerIP
 	}
 	return srvIP
+}
+
+// safeUint64ToInt safely converts uint64 to int, capping at MaxInt if overflow would occur
+func safeUint64ToInt(val uint64) int {
+	if val > uint64(math.MaxInt) {
+		return math.MaxInt
+	}
+	return int(val)
+}
+
+// safeIntToUint64 safely converts int to uint64
+func safeIntToUint64(val int) uint64 {
+	if val < 0 {
+		return 0
+	}
+	return uint64(val)
+}
+
+// safeUint32ToUint64 safely converts uint32 to uint64
+func safeUint32ToUint64(val uint32) uint64 {
+	return uint64(val)
 }
