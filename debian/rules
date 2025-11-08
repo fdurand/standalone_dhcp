@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export GO111MODULE = on
+export GOCACHE = $(CURDIR)/.cache
+
+%:
+	dh $@ --with=systemd
+
+override_dh_auto_build:
+	go build -v -o godhcp
+
+override_dh_auto_install:
+	install -D -m 0755 godhcp debian/godhcp/usr/local/sbin/godhcp
+	install -D -m 0644 godhcp.ini debian/godhcp/usr/local/etc/godhcp.ini
+	install -D -m 0644 godhcp.service debian/godhcp/lib/systemd/system/godhcp.service
+	install -d debian/godhcp/usr/local/share/godhcp/webui
+	install -m 0644 webui/index.html debian/godhcp/usr/local/share/godhcp/webui/
+
+override_dh_auto_test:
+	# Skip tests for now
+
+override_dh_auto_clean:
+	rm -f godhcp
+	rm -rf .cache
+	dh_auto_clean

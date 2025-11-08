@@ -1,0 +1,23 @@
+Source: godhcp
+Section: net
+Priority: optional
+Maintainer: Fabrice Durand <fdurand@inverse.ca>
+Build-Depends: debhelper (>= 10), golang-go (>= 1.16), dh-systemd
+Standards-Version: 4.1.3
+Homepage: https://github.com/fdurand/standalone_dhcp
+
+Package: godhcp
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: High-performance standalone DHCP server
+ A high-performance, multi-interface DHCP server written in Go.
+ .
+ Features:
+  - Multiple network interface support
+  - DHCP relay functionality
+  - Static IP assignments
+  - IP pool management with multiple algorithms
+  - REST API for monitoring and management
+  - Web-based configuration interface
+  - Systemd integration
+  - Real-time statistics and debugging

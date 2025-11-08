@@ -1,0 +1,22 @@
+godhcp (1.1.0) unstable; urgency=medium
+
+  * Add web UI for configuration management
+  * Add GET /api/v1/config endpoint to retrieve configuration
+  * Add POST /api/v1/config endpoint to update configuration
+  * Implement modern, responsive web interface
+  * Support for managing interfaces, networks, and DHCP options
+  * Add comprehensive form validation and error handling
+
+ -- Fabrice Durand <fdurand@inverse.ca>  Fri, 08 Nov 2025 16:00:00 +0000
+
+godhcp (1.0.0) unstable; urgency=medium
+
+  * Initial release
+  * Multi-interface DHCP server support
+  * DHCP relay functionality
+  * Static IP assignments
+  * IP pool management with multiple algorithms
+  * REST API for monitoring
+  * Systemd integration
+
+ -- Fabrice Durand <fdurand@inverse.ca>  Mon, 17 Mar 2020 00:00:00 +0000

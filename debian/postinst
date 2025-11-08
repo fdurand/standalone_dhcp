@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -e
+
+case "$1" in
+    configure)
+        # Create directories if they don't exist
+        mkdir -p /usr/local/etc
+        mkdir -p /usr/local/share/godhcp/webui
+
+        # Set proper permissions
+        chmod 644 /usr/local/etc/godhcp.ini
+        chmod 755 /usr/local/sbin/godhcp
+        chmod 755 /usr/local/share/godhcp/webui
+        chmod 644 /usr/local/share/godhcp/webui/index.html
+
+        # Reload systemd
+        systemctl daemon-reload || true
+
+        # Enable the service
+        systemctl enable godhcp.service || true
+
+        echo "godhcp has been installed successfully."
+        echo "Configuration file: /usr/local/etc/godhcp.ini"
+        echo "Web UI will be available at: http://127.0.0.1:22227/"
+        echo ""
+        echo "To start the service, run: systemctl start godhcp"
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

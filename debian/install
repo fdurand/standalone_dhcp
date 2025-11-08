@@ -1,0 +1,3 @@
+godhcp usr/local/sbin/
+godhcp.ini usr/local/etc/
+webui/index.html usr/local/share/godhcp/webui/
