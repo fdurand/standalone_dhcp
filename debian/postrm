@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -e
+
+case "$1" in
+    purge)
+        # Remove configuration files and directories on purge
+        rm -f /usr/local/etc/godhcp.ini
+        rm -rf /usr/local/share/godhcp
+
+        # Reload systemd
+        systemctl daemon-reload || true
+
+        echo "godhcp has been purged."
+        ;;
+
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        # Reload systemd
+        systemctl daemon-reload || true
+        ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

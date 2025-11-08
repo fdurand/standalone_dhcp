@@ -1,0 +1,13 @@
+[Unit]
+Description=Standalone DHCP Server
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/sbin/godhcp
+WatchdogSec=30s
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

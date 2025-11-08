@@ -46,3 +46,15 @@ config.ini.local
 # Temporary files
 tmp/
 temp/
+
+# Debian build artifacts
+debian/godhcp/
+debian/.debhelper/
+debian/files
+debian/*.log
+debian/*.substvars
+debian/*.debhelper
+.cache/
+*.deb
+*.changes
+*.buildinfo
