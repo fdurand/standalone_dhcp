@@ -65,7 +65,7 @@ func newDHCPConfig() *Interfaces {
 
 func (d *Interfaces) readConfig() {
 
-	cfg, err := ini.Load("/usr/local/etc/godhcp.ini")
+	cfg, err := ini.Load(configFilePath)
 	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
 		os.Exit(1)
@@ -129,8 +129,17 @@ func (d *Interfaces) readConfig() {
 					if sec.Key("dhcpd").String() == "disabled" {
 						continue
 					}
-					if (NetIP.Contains(net.ParseIP(sec.Key("dhcp_start").String())) && NetIP.Contains(net.ParseIP(sec.Key("dhcp_end").String()))) || NetIP.Contains(net.ParseIP(sec.Key("next_hop").String())) {
-						if int(binary.BigEndian.Uint32(net.ParseIP(sec.Key("dhcp_start").String()).To4())) > int(binary.BigEndian.Uint32(net.ParseIP(sec.Key("dhcp_end").String()).To4())) {
+					dhcpStart := net.ParseIP(sec.Key("dhcp_start").String())
+					dhcpEnd := net.ParseIP(sec.Key("dhcp_end").String())
+					if (NetIP.Contains(dhcpStart) && NetIP.Contains(dhcpEnd)) || NetIP.Contains(net.ParseIP(sec.Key("next_hop").String())) {
+						// dhcp_start/dhcp_end must be valid IPv4 addresses before we
+						// can compute the pool range; a malformed value would
+						// otherwise panic when converted with binary.BigEndian.
+						if dhcpStart.To4() == nil || dhcpEnd.To4() == nil {
+							log.LoggerWContext(ctx).Error("Missing or invalid dhcp_start/dhcp_end, check your network " + key)
+							continue
+						}
+						if binary.BigEndian.Uint32(dhcpStart.To4()) > binary.BigEndian.Uint32(dhcpEnd.To4()) {
 							log.LoggerWContext(ctx).Error("Wrong configuration, check your network " + key)
 							continue
 						}
@@ -143,13 +152,13 @@ func (d *Interfaces) readConfig() {
 						DHCPScope.ip = IP.To4()
 
 						DHCPScope.role = "none"
-						DHCPScope.start = net.ParseIP(sec.Key("dhcp_start").String())
+						DHCPScope.start = dhcpStart
 						seconds, _ := strconv.Atoi(sec.Key("dhcp_default_lease_time").String())
 						DHCPScope.leaseDuration = time.Duration(seconds) * time.Second
-						DHCPScope.leaseRange = dhcp.IPRange(net.ParseIP(sec.Key("dhcp_start").String()), net.ParseIP(sec.Key("dhcp_end").String()))
+						DHCPScope.leaseRange = dhcp.IPRange(dhcpStart, dhcpEnd)
 						algorithm, _ := strconv.Atoi(sec.Key("algorithm").String())
 						// Initialize dhcp pool
-						available := pool.NewDHCPPool(safeIntToUint64(dhcp.IPRange(net.ParseIP(sec.Key("dhcp_start").String()), net.ParseIP(sec.Key("dhcp_end").String()))), algorithm)
+						available := pool.NewDHCPPool(safeIntToUint64(dhcp.IPRange(dhcpStart, dhcpEnd)), algorithm)
 						DHCPScope.available = available
 
 						// Initialize hardware cache

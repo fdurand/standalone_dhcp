@@ -17,13 +17,17 @@ import (
 // Broadcast Listener
 func (I *Interface) run(ctx context.Context, jobs chan job) {
 
-	ListenAndServeIf(ctx, I, I, jobs)
+	if err := ListenAndServeIf(ctx, I, I, jobs); err != nil {
+		log.LoggerWContext(ctx).Error("Broadcast listener on " + I.Name + " stopped: " + err.Error())
+	}
 }
 
 // Unicast listener
 func (I *Interface) runUnicast(ctx context.Context, jobs chan job) {
 
-	ListenAndServeIfUnicast(ctx, I, I, jobs)
+	if err := ListenAndServeIfUnicast(ctx, I, I, jobs); err != nil {
+		log.LoggerWContext(ctx).Error("Unicast listener on " + I.Name + " stopped: " + err.Error())
+	}
 }
 
 // Return true is it's a relay interface
@@ -32,6 +36,22 @@ func (I *Interface) isRelay() bool {
 		return true
 	}
 	return false
+}
+
+// buildReplyOptions builds the DHCP option set to return to a client. It
+// shuffles the DNS and router options (so clients get varied orderings) and
+// applies any configured network/MAC option overrides. Used for both OFFER and
+// ACK replies so the two stay consistent.
+func buildReplyOptions(baseOptions dhcp.Options, p dhcp.Packet, networkIP, clientMac string) dhcp.Options {
+	options := make(dhcp.Options)
+	for key, value := range baseOptions {
+		if key == dhcp.OptionDomainNameServer || key == dhcp.OptionRouter {
+			options[key] = ShuffleIP(value, int64(p.CHAddr()[5]))
+		} else {
+			options[key] = value
+		}
+	}
+	return ApplyOptionOverrides(options, networkIP, clientMac)
 }
 
 func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.MessageType, srcIP net.Addr, srvIP net.IP) (answer Answer) {
@@ -350,25 +370,14 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 	reply:
 
 		answer.IP = dhcp.IPAdd(handler.start, free)
-		// Add options on the fly
-		var GlobalOptions dhcp.Options
-		var options = make(map[dhcp.OptionCode][]byte)
-		for key, value := range handler.options {
-			if key == dhcp.OptionDomainNameServer || key == dhcp.OptionRouter {
-				options[key] = ShuffleIP(value, int64(p.CHAddr()[5]))
-			} else {
-				options[key] = value
-			}
-		}
-		GlobalOptions = options
-		// Apply option overrides
-		GlobalOptions = ApplyOptionOverrides(GlobalOptions, networkIP, clientMac)
+		// Add options on the fly (with overrides applied)
+		GlobalOptions := buildReplyOptions(handler.options, p, networkIP, clientMac)
 		leaseDuration := handler.leaseDuration
 
 		log.LoggerWContext(ctx).Info("DHCPOFFER on " + answer.IP.String() + " to " + clientMac + " (" + clientHostname + ")")
 
 		answer.D = dhcp.ReplyPacket(p, dhcp.Offer, handler.ip.To4(), answer.IP, leaseDuration,
-			GlobalOptions.SelectOrderOrAll(options[dhcp.OptionParameterRequestList]))
+			GlobalOptions.SelectOrderOrAll(GlobalOptions[dhcp.OptionParameterRequestList]))
 
 		return answer
 
@@ -451,19 +460,12 @@ func (I *Interface) ServeDHCP(ctx context.Context, p dhcp.Packet, msgType dhcp.M
 			}
 
 			if Reply {
-				var GlobalOptions dhcp.Options
-				var options = make(map[dhcp.OptionCode][]byte)
-				for key, value := range handler.options {
-					if key == dhcp.OptionDomainNameServer || key == dhcp.OptionRouter {
-						options[key] = ShuffleIP(value, int64(p.CHAddr()[5]))
-					} else {
-						options[key] = value
-					}
-				}
-				GlobalOptions = options
+				// Build the same option set as the OFFER, including overrides,
+				// so the client receives consistent options across the exchange.
+				GlobalOptions := buildReplyOptions(handler.options, p, networkIP, clientMac)
 				leaseDuration := handler.leaseDuration
 				answer.D = dhcp.ReplyPacket(p, dhcp.ACK, handler.ip.To4(), reqIP, leaseDuration,
-					GlobalOptions.SelectOrderOrAll(options[dhcp.OptionParameterRequestList]))
+					GlobalOptions.SelectOrderOrAll(GlobalOptions[dhcp.OptionParameterRequestList]))
 				// Update Global Caches
 				GlobalIpCache.Set(reqIP.String(), p.CHAddr().String(), leaseDuration+(time.Duration(15)*time.Second))
 				GlobalMacCache.Set(p.CHAddr().String(), reqIP.String(), leaseDuration+(time.Duration(15)*time.Second))

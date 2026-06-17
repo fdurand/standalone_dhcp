@@ -25,6 +25,39 @@ func teardownTestDB(t *testing.T, dbPath string) {
 	os.Remove(dbPath)
 }
 
+func TestCachedOverrideInvalidation(t *testing.T) {
+	dbPath := setupTestDB(t)
+	defer teardownTestDB(t, dbPath)
+
+	if err := InitDatabase(dbPath); err != nil {
+		t.Fatalf("InitDatabase failed: %v", err)
+	}
+
+	const mac = "aa:bb:cc:dd:ee:ff"
+
+	// Negative lookup should be cached and report no override.
+	if o, err := cachedGetOptionOverride("mac", mac); err != nil || o != nil {
+		t.Fatalf("expected no override, got %v err %v", o, err)
+	}
+
+	// Saving must invalidate the cached negative entry.
+	if err := SaveOptionOverride("mac", mac, []DHCPOption{{OptionCode: 51, OptionValue: "3600", OptionType: "uint32"}}); err != nil {
+		t.Fatalf("SaveOptionOverride failed: %v", err)
+	}
+	o, err := cachedGetOptionOverride("mac", mac)
+	if err != nil || o == nil || len(o.Options) != 1 {
+		t.Fatalf("expected saved override to be visible, got %v err %v", o, err)
+	}
+
+	// Deleting must invalidate the cached positive entry.
+	if err := DeleteOptionOverride("mac", mac); err != nil {
+		t.Fatalf("DeleteOptionOverride failed: %v", err)
+	}
+	if o, err := cachedGetOptionOverride("mac", mac); err != nil || o != nil {
+		t.Fatalf("expected override to be gone after delete, got %v err %v", o, err)
+	}
+}
+
 func TestInitDatabase(t *testing.T) {
 	dbPath := setupTestDB(t)
 	defer teardownTestDB(t, dbPath)
@@ -345,6 +378,27 @@ func TestConvertOptionToDHCP(t *testing.T) {
 			checkValue: func(b []byte) bool {
 				return len(b) == 1 && b[0] == 255
 			},
+		},
+		{
+			name:        "Hex plain",
+			option:      DHCPOption{OptionCode: 43, OptionValue: "deadbeef", OptionType: "hex"},
+			expectError: false,
+			checkValue: func(b []byte) bool {
+				return len(b) == 4 && b[0] == 0xde && b[1] == 0xad && b[2] == 0xbe && b[3] == 0xef
+			},
+		},
+		{
+			name:        "Hex with 0x prefix and colons",
+			option:      DHCPOption{OptionCode: 43, OptionValue: "0xde:ad:be:ef", OptionType: "hex"},
+			expectError: false,
+			checkValue: func(b []byte) bool {
+				return len(b) == 4 && b[0] == 0xde && b[3] == 0xef
+			},
+		},
+		{
+			name:        "Invalid hex",
+			option:      DHCPOption{OptionCode: 43, OptionValue: "zzzz", OptionType: "hex"},
+			expectError: true,
 		},
 		{
 			name:        "Invalid IP",

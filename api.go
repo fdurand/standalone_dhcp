@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -141,10 +140,10 @@ func handleMac2Ip(res http.ResponseWriter, req *http.Request) {
 
 func handleAllStats(res http.ResponseWriter, req *http.Request) {
 	var result Items
-	cfg, err := ini.Load("/usr/local/etc/godhcp.ini")
+	cfg, err := ini.Load(configFilePath)
 	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(1)
+		unifiedapierrors.Error(res, "Failed to load configuration: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	Interfaces := cfg.Section("interfaces").Key("listen").String()
@@ -218,9 +217,16 @@ func handleDebug(res http.ResponseWriter, req *http.Request) {
 
 func handleReleaseIP(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	_ = InterfaceScopeFromMac(vars["mac"])
+	network := InterfaceScopeFromMac(vars["mac"])
 
-	var result = &Info{Mac: vars["mac"], Status: "ACK"}
+	// InterfaceScopeFromMac returns the network the MAC was found in, or an
+	// empty string when nothing was released.
+	if network == "" {
+		unifiedapierrors.Error(res, "Cannot find an active lease for this MAC address", http.StatusNotFound)
+		return
+	}
+
+	var result = &Info{Mac: vars["mac"], Network: network, Status: "ACK"}
 
 	res.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	res.WriteHeader(http.StatusOK)
@@ -300,7 +306,7 @@ func (h *Interface) handleApiReq(Request ApiReq) interface{} {
 
 // handleGetConfig returns the current DHCP configuration
 func handleGetConfig(res http.ResponseWriter, req *http.Request) {
-	cfg, err := ini.Load("/usr/local/etc/godhcp.ini")
+	cfg, err := ini.Load(configFilePath)
 	if err != nil {
 		unifiedapierrors.Error(res, "Failed to load configuration: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -429,7 +435,7 @@ func handleUpdateConfig(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// Save to file
-	if err := cfg.SaveTo("/usr/local/etc/godhcp.ini"); err != nil {
+	if err := cfg.SaveTo(configFilePath); err != nil {
 		unifiedapierrors.Error(res, "Failed to save configuration: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -616,6 +622,12 @@ func handleGetOptionOverride(res http.ResponseWriter, req *http.Request) {
 	if overrideType != "network" && overrideType != "mac" {
 		unifiedapierrors.Error(res, "Invalid type. Must be 'network' or 'mac'", http.StatusBadRequest)
 		return
+	}
+
+	// MAC overrides are stored lowercased; normalize the lookup so a request
+	// with an uppercase MAC still resolves.
+	if overrideType == "mac" {
+		target = strings.ToLower(target)
 	}
 
 	override, err := GetOptionOverride(overrideType, target)

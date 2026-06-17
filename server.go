@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 
+	"github.com/inverse-inc/packetfence/go/log"
 	dhcp "github.com/krolaw/dhcp4"
 	"golang.org/x/net/ipv4"
 )
@@ -76,9 +77,14 @@ func Serve(conn *serveIfConn, handler Handler, jobs chan job, interfaceNet *Inte
 		dhcprequest = append([]byte(nil), req...)
 		// addr is source ip address cm.Dst is the target
 		jobe := job{DHCPpacket: dhcprequest, msgType: reqType, Int: interfaceNet, handler: handler, clientAddr: addr, localCtx: ctx}
-		go func() {
-			jobs <- jobe
-		}()
+		// Enqueue the job. The queue is intentionally bounded: when it is full
+		// we drop the packet (DHCP clients retransmit) instead of spawning an
+		// unbounded number of goroutines that would defeat the worker pool.
+		select {
+		case jobs <- jobe:
+		default:
+			log.LoggerWContext(ctx).Warn("DHCP job queue full, dropping packet")
+		}
 
 	}
 }
