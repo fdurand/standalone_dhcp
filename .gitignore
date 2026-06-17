@@ -50,6 +50,7 @@ temp/
 # Debian build artifacts
 debian/godhcp/
 debian/.debhelper/
+debian/debhelper-build-stamp
 debian/files
 debian/*.log
 debian/*.substvars
