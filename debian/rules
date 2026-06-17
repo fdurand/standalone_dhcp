@@ -10,6 +10,11 @@ export GOTOOLCHAIN = local
 %:
 	dh $@
 
+# This package intentionally installs under /usr/local. dh_usrlocal enforces
+# Debian Policy (which reserves /usr/local for the local admin and rejects
+# files shipped there), so skip it.
+override_dh_usrlocal:
+
 override_dh_auto_build:
 	go build -v -o godhcp
 
