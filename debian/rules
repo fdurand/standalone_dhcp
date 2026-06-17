@@ -3,9 +3,12 @@
 export DH_VERBOSE = 1
 export GO111MODULE = on
 export GOCACHE = $(CURDIR)/.cache
+# Use the Go toolchain installed on the build host (as declared in go.mod)
+# instead of downloading the version pinned in the go directive.
+export GOTOOLCHAIN = local
 
 %:
-	dh $@ --with=systemd
+	dh $@
 
 override_dh_auto_build:
 	go build -v -o godhcp

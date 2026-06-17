@@ -1,3 +1,15 @@
+godhcp (1.1.1) unstable; urgency=medium
+
+  * Drop golang-go and dh-systemd build dependencies; build with the Go
+    toolchain installed on the host as declared in go.mod
+  * Remove obsolete --with=systemd dh sequence (systemd handled by the
+    maintainer scripts); pin GOTOOLCHAIN=local to avoid network downloads
+  * Bump go directive to 1.26.4
+  * Fix DHCP option override correctness (apply overrides to ACK, decode
+    hex options) and harden runtime paths against crashes
+
+ -- Fabrice Durand <fdurand@inverse.ca>  Tue, 17 Jun 2026 00:00:00 +0000
+
 godhcp (1.1.0) unstable; urgency=medium
 
   * Add web UI for configuration management

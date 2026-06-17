@@ -2,7 +2,7 @@ Source: godhcp
 Section: net
 Priority: optional
 Maintainer: Fabrice Durand <fdurand@inverse.ca>
-Build-Depends: debhelper (>= 10), golang-go (>= 1.16), dh-systemd
+Build-Depends: debhelper (>= 10)
 Standards-Version: 4.1.3
 Homepage: https://github.com/fdurand/standalone_dhcp
 
