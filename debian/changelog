@@ -1,3 +1,11 @@
+godhcp (1.1.2) unstable; urgency=medium
+
+  * Security: bump golang.org/x/net to v0.56.0 and golang.org/x/sys to
+    v0.46.0, clearing all known vulnerabilities reported by govulncheck
+    (none were reachable from godhcp code, but they cleared the alerts)
+
+ -- Fabrice Durand <fdurand@inverse.ca>  Wed, 17 Jun 2026 12:00:00 +0000
+
 godhcp (1.1.1) unstable; urgency=medium
 
   * Drop golang-go and dh-systemd build dependencies; build with the Go

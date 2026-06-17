@@ -17,7 +17,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
 	github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/net v0.56.0
 )
 
 require (
@@ -29,6 +29,6 @@ require (
 	github.com/kr/text v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
-	golang.org/x/sys v0.0.0-20210330210617-4fbd30eecc44 // indirect
+	golang.org/x/sys v0.46.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
