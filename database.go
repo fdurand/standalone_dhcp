@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -17,9 +18,49 @@ import (
 )
 
 var (
-	db       *sql.DB
-	dbMutex  sync.RWMutex
+	db      *sql.DB
+	dbMutex sync.RWMutex
+
+	// overrideCache memoizes option override lookups so the DHCP hot path does
+	// not hit SQLite on every packet. A nil value is a valid (negative) entry
+	// meaning "no override exists for this target". Invalidated on writes.
+	overrideCache   = make(map[string]*OptionOverride)
+	overrideCacheMu sync.RWMutex
 )
+
+func overrideCacheKey(overrideType, target string) string {
+	return overrideType + "\x00" + target
+}
+
+func invalidateOverrideCache(overrideType, target string) {
+	overrideCacheMu.Lock()
+	delete(overrideCache, overrideCacheKey(overrideType, target))
+	overrideCacheMu.Unlock()
+}
+
+// cachedGetOptionOverride returns the override for the given target, using an
+// in-memory cache to avoid a database round-trip on every DHCP packet.
+func cachedGetOptionOverride(overrideType, target string) (*OptionOverride, error) {
+	key := overrideCacheKey(overrideType, target)
+
+	overrideCacheMu.RLock()
+	cached, ok := overrideCache[key]
+	overrideCacheMu.RUnlock()
+	if ok {
+		return cached, nil
+	}
+
+	override, err := GetOptionOverride(overrideType, target)
+	if err != nil {
+		return nil, err
+	}
+
+	overrideCacheMu.Lock()
+	overrideCache[key] = override
+	overrideCacheMu.Unlock()
+
+	return override, nil
+}
 
 // DHCPOption represents a DHCP option override
 type DHCPOption struct {
@@ -71,6 +112,12 @@ func InitDatabase(dbPath string) error {
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
 
+	// The override cache mirrors the database; reopening the database must
+	// start from a clean cache.
+	overrideCacheMu.Lock()
+	overrideCache = make(map[string]*OptionOverride)
+	overrideCacheMu.Unlock()
+
 	return nil
 }
 
@@ -104,6 +151,8 @@ func SaveOptionOverride(overrideType, target string, options []DHCPOption) error
 	if err != nil {
 		return fmt.Errorf("failed to save option override: %w", err)
 	}
+
+	invalidateOverrideCache(overrideType, target)
 
 	return nil
 }
@@ -166,6 +215,8 @@ func DeleteOptionOverride(overrideType, target string) error {
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
 	}
+
+	invalidateOverrideCache(overrideType, target)
 
 	return nil
 }
@@ -296,8 +347,13 @@ func ConvertOptionToDHCP(option DHCPOption) (dhcp.OptionCode, []byte, error) {
 		return code, []byte{byte(val)}, nil
 
 	case "hex":
-		// Hexadecimal string
-		return code, []byte(option.OptionValue), nil
+		// Hexadecimal string, e.g. "0xdeadbeef", "de:ad:be:ef" or "deadbeef"
+		cleaned := strings.NewReplacer("0x", "", "0X", "", ":", "", "-", "", " ", "").Replace(option.OptionValue)
+		decoded, err := hex.DecodeString(cleaned)
+		if err != nil {
+			return 0, nil, fmt.Errorf("invalid hex value %q: %w", option.OptionValue, err)
+		}
+		return code, decoded, nil
 
 	default:
 		return 0, nil, fmt.Errorf("unsupported option type: %s", option.OptionType)
@@ -314,7 +370,7 @@ func ApplyOptionOverrides(options dhcp.Options, networkIP, mac string) dhcp.Opti
 
 	// Apply network-level overrides first
 	if networkIP != "" {
-		networkOverride, err := GetOptionOverride("network", networkIP)
+		networkOverride, err := cachedGetOptionOverride("network", networkIP)
 		if err == nil && networkOverride != nil {
 			for _, opt := range networkOverride.Options {
 				code, value, err := ConvertOptionToDHCP(opt)
@@ -329,7 +385,7 @@ func ApplyOptionOverrides(options dhcp.Options, networkIP, mac string) dhcp.Opti
 
 	// Apply MAC-level overrides (these take precedence)
 	if mac != "" {
-		macOverride, err := GetOptionOverride("mac", mac)
+		macOverride, err := cachedGetOptionOverride("mac", mac)
 		if err == nil && macOverride != nil {
 			for _, opt := range macOverride.Options {
 				code, value, err := ConvertOptionToDHCP(opt)

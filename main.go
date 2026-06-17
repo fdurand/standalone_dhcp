@@ -42,6 +42,13 @@ var intNametoInterface map[string]*Interface
 const FreeMac = "00:00:00:00:00:00"
 const FakeMac = "ff:ff:ff:ff:ff:ff"
 
+// Filesystem paths used by the daemon.
+const (
+	configFilePath   = "/usr/local/etc/godhcp.ini"
+	databaseFilePath = "/usr/local/etc/godhcp.db"
+	webUIDir         = "/usr/local/share/godhcp/webui"
+)
+
 func main() {
 	log.SetProcessName("godhcp")
 	ctx = log.LoggerNewContext(ctx)
@@ -50,7 +57,7 @@ func main() {
 	http.DefaultClient.Timeout = 10 * time.Second
 
 	// Initialize SQLite database for option overrides
-	if err := InitDatabase("/usr/local/etc/godhcp.db"); err != nil {
+	if err := InitDatabase(databaseFilePath); err != nil {
 		log.LoggerWContext(ctx).Error("Failed to initialize database: " + err.Error())
 		os.Exit(1)
 	}
@@ -93,23 +100,17 @@ func main() {
 
 	intNametoInterface = make(map[string]*Interface)
 
-	// Unicast listener
-	for _, v := range DHCPConfig.intsNet {
-		v := v
-		// Create a channel for each interfaces
-		intNametoInterface[v.Name] = &v
-		go func() {
-			v.runUnicast(ctx, jobs)
-		}()
+	// Reference the interfaces by their address in the backing slice so the
+	// API map, the unicast listener and the broadcast listener all share the
+	// same Interface value rather than independent copies.
+	for i := range DHCPConfig.intsNet {
+		iface := &DHCPConfig.intsNet[i]
+		intNametoInterface[iface.Name] = iface
 
-	}
-
-	// Broadcast listener
-	for _, v := range DHCPConfig.intsNet {
-		v := v
-		go func() {
-			v.run(ctx, jobs)
-		}()
+		// Unicast listener
+		go iface.runUnicast(ctx, jobs)
+		// Broadcast listener
+		go iface.run(ctx, jobs)
 	}
 
 	// Api
@@ -133,7 +134,7 @@ func main() {
 	router.HandleFunc("/api/v1/dhcp/options/{type}/{target}", handleGetOptionOverride).Methods("GET")
 
 	// Serve static web UI
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir("/usr/local/share/godhcp/webui")))
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir(webUIDir)))
 
 	srv := &http.Server{
 		Addr:        "127.0.0.1:22227",
@@ -175,8 +176,6 @@ func main() {
 
 func recoverName(options dhcp.Options) {
 	if r := recover(); r != nil {
-		fmt.Println("recovered from ", r)
-		fmt.Println(errors.Wrap(r, 2).ErrorStack())
-		spew.Dump(options)
+		log.LoggerWContext(ctx).Error(fmt.Sprintf("recovered from panic: %v\n%s\n%s", r, errors.Wrap(r, 2).ErrorStack(), spew.Sdump(options)))
 	}
 }
